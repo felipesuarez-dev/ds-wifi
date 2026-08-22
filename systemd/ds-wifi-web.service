@@ -1,0 +1,15 @@
+[Unit]
+Description=DS WiFi web UI
+After=network.target
+
+[Service]
+Type=simple
+User=dswifi
+Group=dswifi
+WorkingDirectory=/opt/ds-wifi/web
+ExecStart=@NODE@ /opt/ds-wifi/web/server.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

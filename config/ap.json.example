@@ -1,0 +1,22 @@
+{
+  "ssid": "NDSWFC",
+  "security": "open",
+  "wepKey": "",
+  "channel": 6,
+  "hwMode": "g",
+  "countryCode": "CL",
+  "hidden": false,
+  "macFilter": true,
+  "macList": [],
+  "apIp": "192.168.50.1",
+  "prefix": 24,
+  "dhcpStart": "192.168.50.50",
+  "dhcpEnd": "192.168.50.200",
+  "leaseTime": "12h",
+  "dnsClients": "1.1.1.1",
+  "isolation": true,
+  "autoOffMinutes": 0,
+  "pin": "",
+  "wifiInterface": "wlp2s0",
+  "lanInterface": "enp1s0"
+}

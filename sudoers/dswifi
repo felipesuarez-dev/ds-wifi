@@ -1,0 +1,5 @@
+dswifi ALL=(root) NOPASSWD: /usr/bin/systemctl start ds-wifi-ap
+dswifi ALL=(root) NOPASSWD: /usr/bin/systemctl stop ds-wifi-ap
+dswifi ALL=(root) NOPASSWD: /usr/bin/systemctl restart ds-wifi-ap
+dswifi ALL=(root) NOPASSWD: /opt/ds-wifi/bin/status.sh
+dswifi ALL=(root) NOPASSWD: /opt/ds-wifi/bin/log.sh

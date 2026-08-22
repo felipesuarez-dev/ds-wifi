@@ -1,0 +1,9 @@
+# config real (contiene MACs / PIN del usuario)
+config/ap.json
+
+# generados en runtime
+config/generated/
+config/leases
+
+# logs
+logs/

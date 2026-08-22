@@ -1,0 +1,13 @@
+[Unit]
+Description=DS WiFi access point (hostapd + dnsmasq + NAT)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/ds-wifi/bin/ap-control.sh start
+ExecStop=/opt/ds-wifi/bin/ap-control.sh stop
+
+[Install]
+WantedBy=multi-user.target

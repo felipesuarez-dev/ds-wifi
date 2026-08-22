@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#08080d">
+<title>DS WiFi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--bg:#08080d;--card:#0e0e15;--card-b:#171722;--card-c:#1d1d2b;--mint:#34d399;--mint-2:#2ab88c;--mint-g:rgba(52,211,153,.14);--mint-s:rgba(52,211,153,.06);--red:#f43f5e;--red-g:rgba(244,63,94,.12);--amber:#fbbf24;--amber-g:rgba(251,191,36,.12);--t:#e7e7ef;--t2:#7a7a94;--t3:#3a3a4a;--r:16px}
+html,body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t);min-height:100dvh;overflow-x:hidden}
+body{display:flex;flex-direction:column;align-items:center;padding:0 14px 40px;background-image:radial-gradient(ellipse 700px 360px at 50% -8%,rgba(52,211,153,.06) 0%,transparent 65%)}
+.hdr{width:100%;max-width:500px;padding:20px 0 6px;display:flex;align-items:center;justify-content:space-between}
+.hdr-l{display:flex;align-items:center;gap:11px}
+.hdr-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(140deg,var(--mint),var(--mint-2));display:flex;align-items:center;justify-content:center;color:var(--bg);box-shadow:0 4px 16px rgba(52,211,153,.25)}
+.hdr-logo svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hdr-t1{font-size:15px;font-weight:700}
+.hdr-t2{font-size:10px;color:var(--t2);letter-spacing:.4px;font-family:'IBM Plex Mono',monospace}
+.hdr-r{display:flex;align-items:center;gap:7px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--t3);transition:.4s}
+.dot.on{background:var(--mint);box-shadow:0 0 12px var(--mint-g)}
+.hdr-st{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--t2);letter-spacing:.5px;text-transform:uppercase}
+.hdr-st.on{color:var(--mint)}
+.wrap{width:100%;max-width:500px;display:flex;flex-direction:column;gap:14px;opacity:0;transform:translateY(10px);animation:up .45s ease .1s forwards}
+@keyframes up{to{opacity:1;transform:none}}
+.card{background:var(--card);border:1px solid var(--card-b);border-radius:var(--r);padding:18px;position:relative}
+.card-title{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:2.2px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card-title:before{content:'';width:3px;height:11px;border-radius:2px;background:var(--mint);opacity:.7}
+.power{display:flex;flex-direction:column;align-items:center;gap:14px;padding:26px 18px;overflow:hidden}
+.power:before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:220px;height:220px;background:radial-gradient(circle,rgba(52,211,153,.10) 0%,transparent 70%);pointer-events:none;transition:.4s}
+.power.on:before{background:radial-gradient(circle,rgba(52,211,153,.16) 0%,transparent 70%)}
+.power-btn{width:96px;height:96px;border-radius:50%;border:1px solid var(--card-c);background:var(--card-b);color:var(--t2);cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;position:relative;z-index:1}
+.power-btn svg{width:36px;height:36px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.power-btn.on{background:linear-gradient(140deg,var(--mint),var(--mint-2));border-color:transparent;color:var(--bg);box-shadow:0 0 0 6px var(--mint-s),0 0 34px rgba(52,211,153,.35)}
+.power-btn:active{transform:scale(.92)}
+.power-label{font-size:17px;font-weight:700}
+.power-sub{font-size:11px;color:var(--t2);font-family:'IBM Plex Mono',monospace}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cell{background:var(--card-b);border-radius:12px;padding:12px 14px}
+.cell-l{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1.6px;font-weight:700;margin-bottom:5px}
+.cell-v{font-size:13px;font-weight:600;font-family:'IBM Plex Mono',monospace;word-break:break-all;display:flex;align-items:center;gap:7px}
+.badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 9px;border-radius:20px;text-transform:uppercase}
+.badge.on{background:var(--mint-g);color:var(--mint)}
+.badge.off{background:var(--red-g);color:var(--red)}
+.badge.warn{background:var(--amber-g);color:var(--amber)}
+.clients{display:flex;flex-direction:column;gap:8px}
+.client{display:flex;align-items:center;gap:12px;background:var(--card-b);border-radius:12px;padding:11px 14px}
+.client-ic{width:34px;height:34px;border-radius:10px;background:var(--mint-s);color:var(--mint);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.client-ic svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.client-info{flex:1;min-width:0}
+.client-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.client-sub{font-size:10px;color:var(--t2);font-family:'IBM Plex Mono',monospace;margin-top:1px}
+.client-sig{font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--t2);white-space:nowrap}
+.sig-good{color:var(--mint)}.sig-mid{color:var(--amber)}.sig-bad{color:var(--red)}
+.empty{font-size:12px;color:var(--t3);text-align:center;padding:12px 0}
+.tog{display:flex;align-items:center;justify-content:center;padding:8px;cursor:pointer;color:var(--t3);font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;transition:.2s;user-select:none}
+.tog:hover{color:var(--t2)}
+.tog svg{width:15px;height:15px;margin-right:6px;fill:none;stroke:currentColor;stroke-width:2;transition:transform .2s}
+.tog.open svg{transform:rotate(180deg)}
+.col{display:none;flex-direction:column;gap:12px}
+.col.open{display:flex}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:10px;color:var(--t2);font-weight:700;letter-spacing:.6px;text-transform:uppercase}
+.field input,.field select{background:var(--card-b);border:1px solid var(--t3);border-radius:11px;color:var(--t);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:12px 14px;outline:none;transition:.15s;width:100%}
+.field input:focus,.field select:focus{border-color:var(--mint);box-shadow:0 0 0 3px var(--mint-s)}
+.field input::placeholder{color:var(--t3)}
+.field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a7a94' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hint{font-size:10px;color:var(--t3);line-height:1.5}
+.hint b{color:var(--t2);font-weight:600}
+.switch-row{display:flex;align-items:center;justify-content:space-between;background:var(--card-b);border-radius:12px;padding:13px 14px;gap:12px}
+.switch-row .lbl{font-size:13px;font-weight:600}
+.switch-row .sub{font-size:10px;color:var(--t2);margin-top:2px;line-height:1.4}
+.switch{width:46px;height:26px;border-radius:20px;background:var(--t3);position:relative;cursor:pointer;transition:.2s;flex-shrink:0;border:none}
+.switch.on{background:var(--mint)}
+.switch:after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.switch.on:after{left:23px}
+.mac-list{display:flex;flex-direction:column;gap:6px}
+.mac-item{display:flex;align-items:center;gap:8px;background:var(--card-b);border-radius:11px;padding:9px 14px}
+.mac-item .mac{flex:1;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:1px}
+.mac-item .del{background:none;border:none;color:var(--t2);cursor:pointer;font-size:16px;padding:4px 8px;border-radius:6px}
+.mac-item .del:hover{color:var(--red)}
+.mac-add{display:flex;gap:8px}
+.mac-add input{flex:1;background:var(--card-b);border:1px solid var(--t3);border-radius:11px;color:var(--t);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:11px 14px;outline:none;text-transform:lowercase}
+.mac-add input:focus{border-color:var(--mint)}
+.btn{display:flex;align-items:center;justify-content:center;height:50px;border-radius:13px;border:none;background:linear-gradient(140deg,var(--mint),var(--mint-2));color:var(--bg);font-weight:700;font-size:14px;cursor:pointer;letter-spacing:.3px;box-shadow:0 4px 18px rgba(52,211,153,.25);width:100%;transition:.15s}
+.btn:active{transform:scale(.97)}
+.btn.ghost{background:var(--card-b);color:var(--t2);box-shadow:none;border:1px solid var(--t3);font-weight:600}
+.log-box{background:#0a0a10;border:1px solid var(--card-b);border-radius:12px;padding:14px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;line-height:1.6;color:var(--t2);max-height:320px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
+.log-box .ok{color:var(--mint)}
+.log-box .warn{color:var(--amber)}
+.log-box .err{color:var(--red)}
+.log-bar{display:flex;gap:8px;margin-top:10px}
+.log-bar .btn{height:38px;font-size:12px;flex:1}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--mint);color:var(--bg);font-size:13px;font-weight:600;padding:12px 22px;border-radius:12px;opacity:0;transition:.3s;z-index:50;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.toast.err{background:var(--red);color:#fff}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px)}
+.modal.open{display:flex}
+.modal-box{background:var(--card);border:1px solid var(--card-b);border-radius:18px;padding:24px;width:min(330px,90vw)}
+.modal-box h3{font-size:16px;margin-bottom:6px}
+.modal-box p{font-size:12px;color:var(--t2);margin-bottom:16px}
+.modal-box input{width:100%;background:var(--card-b);border:1px solid var(--t3);border-radius:11px;color:var(--t);font-family:'IBM Plex Mono',monospace;font-size:16px;padding:13px;outline:none;text-align:center;letter-spacing:5px}
+.modal-box input:focus{border-color:var(--mint)}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-l">
+    <div class="hdr-logo"><svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg></div>
+    <div><div class="hdr-t1">DS WiFi</div><div class="hdr-t2">Nintendo DS · Wiimmfi</div></div>
+  </div>
+  <div class="hdr-r"><span class="dot" id="dot"></span><span class="hdr-st" id="hst">Cargando</span></div>
+</div>
+
+<div class="wrap">
+
+  <div class="card power" id="pwCard">
+    <button class="power-btn" id="pw" onclick="toggle()">
+      <svg viewBox="0 0 24 24"><path d="M12 2v10"/><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/></svg>
+    </button>
+    <div class="power-label" id="pwLabel">Apagada</div>
+    <div class="power-sub" id="pwSub">—</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Red</div>
+    <div class="grid">
+      <div class="cell"><div class="cell-l">SSID</div><div class="cell-v" id="i-ssid">—</div></div>
+      <div class="cell"><div class="cell-l">Seguridad</div><div class="cell-v" id="i-sec">—</div></div>
+      <div class="cell"><div class="cell-l">Canal</div><div class="cell-v" id="i-ch">—</div></div>
+      <div class="cell"><div class="cell-l">IP del AP</div><div class="cell-v" id="i-ip">—</div></div>
+      <div class="cell"><div class="cell-l">Aislamiento</div><div class="cell-v" id="i-iso">—</div></div>
+      <div class="cell"><div class="cell-l">Filtro MAC</div><div class="cell-v" id="i-mac">—</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Clientes conectados</div>
+    <div class="clients" id="clients"><div class="empty">Sin clientes</div></div>
+  </div>
+
+  <div class="tog" id="togCfg" onclick="tg('secCfg','togCfg')">
+    <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>Configuración
+  </div>
+  <div class="col" id="secCfg">
+    <div class="card">
+      <div class="card-title">Red inalámbrica</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="field"><label>SSID</label><input id="f-ssid" placeholder="NDSWFC" maxlength="32"></div>
+        <div class="field"><label>Seguridad</label>
+          <select id="f-sec" onchange="secChange()">
+            <option value="open">Abierta (recomendado)</option>
+            <option value="wep">WEP (legacy)</option>
+          </select>
+        </div>
+        <div class="field" id="f-wepWrap" style="display:none"><label>Clave WEP</label><input id="f-wep" placeholder="5 o 13 caracteres"></div>
+        <div class="row2">
+          <div class="field"><label>Canal</label><select id="f-ch"></select></div>
+          <div class="field"><label>País</label>
+            <select id="f-cc"><option value="CL">CL — Chile</option><option value="US">US</option><option value="AR">AR</option><option value="BR">BR</option><option value="MX">MX</option><option value="ES">ES</option></select>
+          </div>
+        </div>
+        <div class="switch-row">
+          <div><div class="lbl">Ocultar SSID</div><div class="sub">La DS no lo verá en la lista (hay que tipearlo)</div></div>
+          <button class="switch" id="f-hidden" onclick="sw(this)"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Acceso · filtro MAC</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="switch-row">
+          <div><div class="lbl">Filtrar por MAC</div><div class="sub">Solo entran los dispositivos listados</div></div>
+          <button class="switch" id="f-macfilter" onclick="sw(this)"></button>
+        </div>
+        <div class="mac-list" id="macList"></div>
+        <div class="mac-add">
+          <input id="f-macadd" placeholder="AA:BB:CC:DD:EE:FF" maxlength="17">
+          <button class="btn ghost" style="width:auto;height:auto;padding:0 20px" onclick="addMac()">+</button>
+        </div>
+        <div class="hint">La MAC de tu DS está en: juego → Nintendo WFC → Opciones → <b>Información del sistema</b> (Nintendo WFC ID).</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Red / DHCP</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="row2">
+          <div class="field"><label>IP del AP</label><input id="f-apip" placeholder="192.168.50.1"></div>
+          <div class="field"><label>Prefijo</label><select id="f-prefix"><option value="24">/24</option><option value="16">/16</option></select></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>DHCP inicio</label><input id="f-dstart" placeholder="192.168.50.50"></div>
+          <div class="field"><label>DHCP fin</label><input id="f-dend" placeholder="192.168.50.200"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Lease time</label><input id="f-lease" placeholder="12h"></div>
+          <div class="field"><label>DNS clientes</label><input id="f-dns" placeholder="1.1.1.1"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Seguridad & auto</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="switch-row">
+          <div><div class="lbl">Aislamiento guest</div><div class="sub">La DS sale a internet pero no toca tu LAN</div></div>
+          <button class="switch" id="f-isolation" onclick="sw(this)"></button>
+        </div>
+        <div class="field"><label>Auto-apagado (min sin clientes · 0 = off)</label><input id="f-autooff" type="number" min="0" placeholder="0"></div>
+        <div class="field"><label>PIN de acceso (vacío = sin PIN)</label><input id="f-pin" placeholder="opcional"></div>
+      </div>
+    </div>
+
+    <button class="btn" onclick="saveCfg()">Guardar configuración</button>
+    <div class="hint" style="text-align:center">DNS Wiimmfi para la DS: <b>178.62.43.212</b> (Kaeru) o 95.217.77.181</div>
+  </div>
+
+  <div class="tog" id="togLogs" onclick="tgLogs()">
+    <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>Logs del sistema
+  </div>
+  <div class="col" id="secLogs">
+    <div class="card" style="padding:14px">
+      <div class="log-box" id="logBox">Cargando…</div>
+      <div class="log-bar">
+        <button class="btn ghost" onclick="loadLogs()">Actualizar</button>
+        <button class="btn ghost" onclick="document.getElementById('logBox').textContent=''">Limpiar vista</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal" id="pinModal">
+  <div class="modal-box">
+    <h3>PIN de acceso</h3>
+    <p>Esta interfaz está protegida.</p>
+    <input id="pinInput" type="password" placeholder="••••">
+    <div style="height:14px"></div>
+    <button class="btn" onclick="submitPin()">Entrar</button>
+  </div>
+</div>
+
+<script>
+var PIN = localStorage.getItem('ds-wifi-pin') || '';
+var timer = null, logsTimer = null, logsOpen = false;
+
+function api(method, path, body) {
+  var opts = { method: method, headers: {} };
+  if (PIN) opts.headers['x-pin'] = PIN;
+  if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  return fetch('/api' + path, opts).then(function (r) {
+    if (r.status === 401) { askPin(); throw new Error('PIN requerido'); }
+    return r.json();
+  });
+}
+function toast(msg, isErr) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (isErr ? ' err' : '');
+  clearTimeout(timer);
+  timer = setTimeout(function () { el.className = 'toast'; }, 2600);
+}
+function sw(el) { el.classList.toggle('on'); }
+function secChange() {
+  document.getElementById('f-wepWrap').style.display =
+    document.getElementById('f-sec').value === 'wep' ? 'flex' : 'none';
+}
+function tg(sec, tog) {
+  document.getElementById(sec).classList.toggle('open');
+  document.getElementById(tog).classList.toggle('open');
+}
+function sigClass(s) {
+  if (s == null) return '';
+  var v = parseInt(s, 10);
+  if (v >= -55) return 'sig-good';
+  if (v >= -70) return 'sig-mid';
+  return 'sig-bad';
+}
+function esc(s) {
+  return String(s || '').replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; });
+}
+function setState(st) {
+  var dot = document.getElementById('dot'), hst = document.getElementById('hst');
+  var pw = document.getElementById('pw'), label = document.getElementById('pwLabel');
+  var sub = document.getElementById('pwSub'), card = document.getElementById('pwCard');
+  if (st.active) {
+    dot.className = 'dot on'; hst.className = 'hdr-st on'; hst.textContent = 'Encendida';
+    pw.className = 'power-btn on'; card.className = 'card power on'; label.textContent = 'Encendida';
+    var c = st.clients.length;
+    sub.textContent = c === 0 ? 'esperando dispositivos…' : (c + ' dispositivo' + (c === 1 ? '' : 's') + ' conectado' + (c === 1 ? '' : 's'));
+  } else {
+    dot.className = 'dot'; hst.className = 'hdr-st'; hst.textContent = 'Apagada';
+    pw.className = 'power-btn'; card.className = 'card power'; label.textContent = 'Apagada'; sub.textContent = '—';
+  }
+  document.getElementById('i-ssid').textContent = st.config.ssid;
+  document.getElementById('i-sec').textContent = st.config.security === 'wep' ? 'WEP' : 'Abierta';
+  document.getElementById('i-ch').textContent = st.config.channel;
+  document.getElementById('i-ip').textContent = st.config.apIp + '/' + st.config.prefix;
+  document.getElementById('i-iso').innerHTML = st.config.isolation ? '<span class="badge on">ON</span>' : '<span class="badge off">OFF</span>';
+  document.getElementById('i-mac').innerHTML = st.config.macFilter ? '<span class="badge warn">ON</span>' : '<span class="badge off">OFF</span>';
+
+  var box = document.getElementById('clients');
+  if (!st.clients.length) { box.innerHTML = '<div class="empty">Sin clientes</div>'; }
+  else {
+    box.innerHTML = st.clients.map(function (c) {
+      var name = c.host || c.ip || c.mac;
+      var sig = c.signal ? (c.signal + ' dBm') : '';
+      return '<div class="client"><div class="client-ic"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="18" x2="12" y2="18"/></svg></div>' +
+        '<div class="client-info"><div class="client-name">' + esc(name) + '</div>' +
+        '<div class="client-sub">' + c.mac + (c.ip ? ' · ' + c.ip : '') + '</div></div>' +
+        '<div class="client-sig ' + sigClass(c.signal) + '">' + sig + '</div></div>';
+    }).join('');
+  }
+}
+function colorizeLog(line) {
+  var cls = '';
+  if (/error|fail|refused|invalid|deny|denied/i.test(line)) cls = 'err';
+  else if (/warn|release|expire/i.test(line)) cls = 'warn';
+  else if (/start|initi|enabl|DHCPACK|success|joined|inici/i.test(line)) cls = 'ok';
+  return '<span class="' + cls + '">' + esc(line) + '</span>';
+}
+function loadLogs() {
+  api('GET', '/logs?n=300').then(function (r) {
+    var box = document.getElementById('logBox');
+    if (!r.lines || !r.lines.length) { box.textContent = '(sin registros)'; return; }
+    box.innerHTML = r.lines.map(colorizeLog).join('\n');
+  }).catch(function () {});
+}
+function tgLogs() {
+  tg('secLogs', 'togLogs');
+  logsOpen = document.getElementById('secLogs').classList.contains('open');
+  if (logsOpen) { loadLogs(); startLogsPoll(); } else { stopLogsPoll(); }
+}
+function startLogsPoll() { stopLogsPoll(); logsTimer = setInterval(loadLogs, 8000); }
+function stopLogsPoll() { if (logsTimer) { clearInterval(logsTimer); logsTimer = null; } }
+function poll() { api('GET', '/status').then(setState).catch(function () {}); }
+function toggle() {
+  api('GET', '/status').then(function (st) {
+    var wantOn = !st.active;
+    api('POST', '/toggle', { action: wantOn ? 'on' : 'off' }).then(function (r) {
+      if (r.ok) { toast(wantOn ? 'Red encendida' : 'Red apagada'); poll(); if (logsOpen) loadLogs(); }
+      else toast(r.error || 'Error', true);
+    });
+  });
+}
+function fillConfig(c) {
+  document.getElementById('f-ssid').value = c.ssid;
+  document.getElementById('f-sec').value = c.security;
+  document.getElementById('f-wep').value = c.wepKey || '';
+  document.getElementById('f-apip').value = c.apIp;
+  document.getElementById('f-prefix').value = String(c.prefix);
+  document.getElementById('f-dstart').value = c.dhcpStart;
+  document.getElementById('f-dend').value = c.dhcpEnd;
+  document.getElementById('f-lease').value = c.leaseTime;
+  document.getElementById('f-dns').value = c.dnsClients;
+  document.getElementById('f-autooff').value = c.autoOffMinutes || 0;
+  document.getElementById('f-pin').value = c.pin || '';
+
+  var cc = document.getElementById('f-cc'), hasCc = false;
+  for (var i = 0; i < cc.options.length; i++) if (cc.options[i].value === c.countryCode) hasCc = true;
+  if (!hasCc) { var o = document.createElement('option'); o.value = c.countryCode; o.textContent = c.countryCode; cc.appendChild(o); }
+  cc.value = c.countryCode;
+
+  var ch = document.getElementById('f-ch'); ch.innerHTML = '';
+  for (var k = 1; k <= 13; k++) { var op = document.createElement('option'); op.value = k; op.textContent = k; ch.appendChild(op); }
+  ch.value = String(c.channel);
+
+  document.getElementById('f-hidden').className = 'switch' + (c.hidden ? ' on' : '');
+  document.getElementById('f-macfilter').className = 'switch' + (c.macFilter ? ' on' : '');
+  document.getElementById('f-isolation').className = 'switch' + (c.isolation ? ' on' : '');
+  secChange();
+  renderMacs(c.macList || []);
+}
+function renderMacs(list) {
+  var box = document.getElementById('macList');
+  if (!list.length) { box.innerHTML = '<div class="empty">Sin MACs (agrega la de tu DS)</div>'; return; }
+  box.innerHTML = list.map(function (m) {
+    return '<div class="mac-item"><span class="mac">' + m + '</span><button class="del" onclick="delMac(\'' + m + '\')">✕</button></div>';
+  }).join('');
+}
+function addMac() {
+  var inp = document.getElementById('f-macadd'), mac = inp.value.trim().toLowerCase();
+  if (!mac) return;
+  api('POST', '/whitelist', { mac: mac }).then(function (r) {
+    if (r.ok) { inp.value = ''; renderMacs(r.macList); toast('MAC agregada'); }
+    else toast(r.error || 'MAC inválida', true);
+  });
+}
+function delMac(mac) {
+  api('DELETE', '/whitelist/' + mac).then(function (r) {
+    if (r.ok) { renderMacs(r.macList); toast('MAC quitada'); }
+  });
+}
+function saveCfg() {
+  var body = {
+    ssid: document.getElementById('f-ssid').value.trim(),
+    security: document.getElementById('f-sec').value,
+    wepKey: document.getElementById('f-wep').value.trim(),
+    channel: parseInt(document.getElementById('f-ch').value, 10),
+    countryCode: document.getElementById('f-cc').value,
+    hidden: document.getElementById('f-hidden').classList.contains('on'),
+    macFilter: document.getElementById('f-macfilter').classList.contains('on'),
+    apIp: document.getElementById('f-apip').value.trim(),
+    prefix: parseInt(document.getElementById('f-prefix').value, 10),
+    dhcpStart: document.getElementById('f-dstart').value.trim(),
+    dhcpEnd: document.getElementById('f-dend').value.trim(),
+    leaseTime: document.getElementById('f-lease').value.trim(),
+    dnsClients: document.getElementById('f-dns').value.trim(),
+    isolation: document.getElementById('f-isolation').classList.contains('on'),
+    autoOffMinutes: parseInt(document.getElementById('f-autooff').value, 10) || 0,
+    pin: document.getElementById('f-pin').value.trim()
+  };
+  api('POST', '/config', body).then(function (r) {
+    if (r.ok) {
+      if (body.pin !== PIN) { PIN = body.pin; localStorage.setItem('ds-wifi-pin', PIN); }
+      toast(r.restarted ? 'Guardado (red reiniciada)' : 'Guardado');
+      api('GET', '/config').then(fillConfig);
+    } else toast((r.errors || ['Error']).join(' · '), true);
+  });
+}
+function askPin() {
+  document.getElementById('pinModal').classList.add('open');
+  setTimeout(function () { document.getElementById('pinInput').focus(); }, 100);
+}
+function submitPin() {
+  var v = document.getElementById('pinInput').value.trim();
+  if (!v) return;
+  PIN = v; localStorage.setItem('ds-wifi-pin', v);
+  document.getElementById('pinModal').classList.remove('open');
+  init();
+}
+function init() {
+  api('GET', '/config').then(function (c) {
+    fillConfig(c);
+    if (c.pin && PIN !== c.pin) { askPin(); return; }
+    poll();
+  }).catch(function () {});
+}
+window.addEventListener('load', function () { setTimeout(init, 300); });
+setInterval(function () { if (!document.getElementById('pinModal').classList.contains('open')) poll(); }, 5000);
+</script>
+</body>
+</html>
