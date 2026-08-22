@@ -1,61 +1,99 @@
 'use strict';
-// ds-wifi scraper: lee los juegos de ap.json (stats.games), scrapea el nº de
-// jugadores online de cada uno y escribe config/stats.json para la UI.
-// Nota: wiimmfi.de está detrás de Cloudflare; ver docs/RELEASING.md.
+// ds-wifi scraper: obtiene el nº de jugadores online de Wiimmfi y escribe
+// config/stats.json para la UI.
+//
+// Dos caminos:
+//  1) Si ap.json tiene stats.cfClearance + stats.userAgent (cookie válida),
+//     se hace un fetch simple con esos headers (fiable, sin navegador).
+//  2) Si no, Chrome headful + Xvfb + stealth + perfil persistente (la técnica
+//     de los dashboards comunitarios de MKDS), que pasa Cloudflare solo en
+//     redes donde el reto auto-resuelve.
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
 
 const BASE = '/opt/ds-wifi';
 const CFG_PATH = path.join(BASE, 'config', 'ap.json');
 const STATS_PATH = path.join(BASE, 'config', 'stats.json');
+const PROFILE_DIR = path.join(BASE, 'scraper', '.profile');
 
-function loadGames() {
-  try {
-    const cfg = JSON.parse(fs.readFileSync(CFG_PATH, 'utf8'));
-    if (cfg.stats && Array.isArray(cfg.stats.games)) return cfg.stats.games;
-  } catch (e) {}
-  return [];
+function loadCfg() {
+  try { return JSON.parse(fs.readFileSync(CFG_PATH, 'utf8')); } catch (e) { return {}; }
 }
-
+function getGames() {
+  const cfg = loadCfg();
+  return (cfg.stats && Array.isArray(cfg.stats.games)) ? cfg.stats.games : [];
+}
 function writeStats(results) {
   fs.writeFileSync(STATS_PATH, JSON.stringify({ updatedAt: Date.now(), results }, null, 2) + '\n');
 }
-
-// patrones heurísticos para extraer el nº de jugadores online del texto de la página
-const COUNT_PATTERNS = [
-  /(\d+)\s*(?:Spieler|players?|jugadores?)\s*(?:online|en línea|en linea|in game)/i,
-  /online[^0-9]{0,40}(\d+)/i,
-  /(\d+)\s*online/i
-];
-
-function detectBlocked(text, title) {
-  const hay = `${title}\n${text}`.toLowerCase();
-  return /just a moment|verificación|verificacion|un momento|challenge|cloudflare|ray id/i.test(hay);
+function countOnline(html) {
+  const m = html.match(/class="tr[01]"/g);
+  return m ? m.length : 0;
+}
+function isBlockedHtml(html) {
+  return /just a moment|cf-chl|challenge-platform|__cf_chl/i.test(html) || html.indexOf('#online') === -1;
 }
 
-async function scrapeOnce() {
-  const games = loadGames();
-  if (!games.length) {
-    writeStats({});
-    return;
+function fetchViaCookie(url, ua, clearance) {
+  return new Promise((resolve) => {
+    const req = https.get(url, {
+      headers: {
+        'User-Agent': ua,
+        'Cookie': 'cf_clearance=' + clearance,
+        'Accept': 'text/html,application/xhtml+xml'
+      },
+      timeout: 20000
+    }, (res) => {
+      let data = '';
+      res.on('data', c => { if (data.length < 5e6) data += c; });
+      res.on('end', () => resolve({ status: res.statusCode, html: data }));
+    });
+    req.on('timeout', () => { req.destroy(); resolve({ status: 0, html: '' }); });
+    req.on('error', () => resolve({ status: 0, html: '' }));
+  });
+}
+
+async function scrapeViaCookie(cfg, games) {
+  const ua = cfg.stats.userAgent;
+  const clearance = cfg.stats.cfClearance;
+  const results = {};
+  for (const g of games) {
+    if (!g.url) { results[g.id] = { reachable: false, error: 'sin-url' }; continue; }
+    const r = await fetchViaCookie(g.url, ua, clearance);
+    if (r.status === 200 && r.html && !isBlockedHtml(r.html)) {
+      results[g.id] = { reachable: true, onlineCount: countOnline(r.html) };
+    } else if (r.status === 0) {
+      results[g.id] = { reachable: false, error: 'fetch-error' };
+    } else {
+      results[g.id] = { reachable: false, error: 'http-' + r.status };
+    }
   }
+  writeStats(results);
+}
+
+// camino 2: navegador headful + Xvfb (best-effort)
+async function scrapeViaBrowser(games) {
   let puppeteer;
   try {
     const p = require('puppeteer-extra');
     const Stealth = require('puppeteer-extra-plugin-stealth');
+    const UserDataDir = require('puppeteer-extra-plugin-user-data-dir');
     p.use(Stealth());
+    p.use(UserDataDir({ folderPath: PROFILE_DIR }));
     puppeteer = p;
   } catch (e) {
-    // si no está instalado el scraper, marcar todo como no disponible
     const results = {};
     games.forEach(g => { results[g.id] = { reachable: false, error: 'scraper-no-instalado' }; });
     writeStats(results);
     return;
   }
-
+  fs.mkdirSync(PROFILE_DIR, { recursive: true });
   const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    headless: false,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
+           '--disable-blink-features=AutomationControlled', '--window-size=1280,800',
+           '--disable-crash-reporter', '--disable-gpu']
   });
   const results = {};
   try {
@@ -63,25 +101,20 @@ async function scrapeOnce() {
       if (!g.url) { results[g.id] = { reachable: false, error: 'sin-url' }; continue; }
       try {
         const page = await browser.newPage();
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
         await page.setViewport({ width: 1280, height: 800 });
-        await page.goto(g.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-        await new Promise(r => setTimeout(r, 6000));
-        const title = await page.title();
-        const text = await page.evaluate(() => document.body.innerText || '');
+        await page.goto(g.url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        let ok = false;
+        for (let i = 0; i < 18; i++) {
+          let t = '';
+          try { t = await page.title(); } catch (e) {}
+          if (t && !/just a moment|un momento|verificaci/i.test(t.toLowerCase())) { ok = true; break; }
+          await new Promise(r => setTimeout(r, 5000));
+        }
+        const count = ok ? await page.evaluate(() => document.querySelectorAll('#online .tr0, #online .tr1').length) : null;
         await page.close();
-        if (detectBlocked(text, title)) {
-          results[g.id] = { reachable: false, error: 'cloudflare' };
-          continue;
-        }
-        let count = null;
-        for (const re of COUNT_PATTERNS) {
-          const m = text.match(re);
-          if (m) { count = parseInt(m[1], 10); break; }
-        }
-        results[g.id] = { reachable: true, onlineCount: count };
+        results[g.id] = ok ? { reachable: true, onlineCount: count } : { reachable: false, error: 'cloudflare' };
       } catch (e) {
-        results[g.id] = { reachable: false, error: e.message };
+        results[g.id] = { reachable: false, error: e.message.slice(0, 60) };
       }
     }
   } finally {
@@ -90,18 +123,29 @@ async function scrapeOnce() {
   writeStats(results);
 }
 
+async function scrapeOnce() {
+  const cfg = loadCfg();
+  const games = getGames();
+  if (!games.length) { writeStats({}); return; }
+  const ua = cfg.stats && cfg.stats.userAgent;
+  const clearance = cfg.stats && cfg.stats.cfClearance;
+  if (ua && clearance) {
+    await scrapeViaCookie(cfg, games);
+  } else {
+    await scrapeViaBrowser(games);
+  }
+}
+
 async function run() {
-  const games = loadGames();
-  const intervalMs = (() => {
-    try {
-      const cfg = JSON.parse(fs.readFileSync(CFG_PATH, 'utf8'));
-      const m = (cfg.stats && cfg.stats.intervalMinutes) || 3;
-      return Math.max(1, m) * 60000;
-    } catch (e) { return 3 * 60000; }
-  })();
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try { await scrapeOnce(); } catch (e) { console.error('[scraper]', e.message); }
+    let intervalMs = 3 * 60000;
+    try {
+      const cfg = loadCfg();
+      const m = (cfg.stats && cfg.stats.intervalMinutes) || 3;
+      intervalMs = Math.max(1, m) * 60000;
+    } catch (e) {}
     await new Promise(r => setTimeout(r, intervalMs));
   }
 }

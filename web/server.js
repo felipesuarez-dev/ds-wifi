@@ -20,7 +20,7 @@ const DEFAULTS = {
   dhcpEnd: '192.168.50.200', leaseTime: '12h', dnsClients: '1.1.1.1',
   isolation: true, autoOffMinutes: 0, pin: '',
   wifiInterface: 'wlp2s0', lanInterface: 'enp1s0',
-  stats: { enabled: true, intervalMinutes: 3, alerts: true, games: [] }
+  stats: { enabled: true, intervalMinutes: 3, alerts: true, games: [], cfClearance: '', userAgent: '' }
 };
 
 function ipToInt(ip) { return ip.split('.').reduce((a, b) => (a << 8) + (+b >>> 0), 0) >>> 0; }
@@ -45,6 +45,8 @@ function loadConfig() {
   cfg.macList = normalizeMacList(cfg.macList);
   if (!cfg.stats || typeof cfg.stats !== 'object') cfg.stats = DEFAULTS.stats;
   if (!Array.isArray(cfg.stats.games)) cfg.stats.games = [];
+  if (cfg.stats.cfClearance === undefined) cfg.stats.cfClearance = '';
+  if (cfg.stats.userAgent === undefined) cfg.stats.userAgent = '';
   return cfg;
 }
 
@@ -234,6 +236,7 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, {
         enabled: !!cfg.stats.enabled,
         alertsEnabled: !!cfg.stats.alerts,
+        cookieConfigured: !!(cfg.stats.cfClearance && cfg.stats.userAgent),
         updatedAt: (raw && raw.updatedAt) || null,
         games
       });
