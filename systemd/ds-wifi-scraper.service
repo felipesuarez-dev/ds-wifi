@@ -5,10 +5,8 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/opt/ds-wifi/scraper
-Environment=HOME=/opt/ds-wifi/scraper
-Environment=PUPPETEER_CACHE_DIR=/opt/ds-wifi/scraper/.cache
-Environment=TMPDIR=/tmp
-ExecStart=/usr/bin/xvfb-run -a -s "-screen 0 1280x800x24" /usr/local/bin/node /opt/ds-wifi/scraper/scraper.js
+Environment=HOME=/root
+ExecStart=/usr/bin/xvfb-run -a -s "-screen 0 1280x800x24" /opt/ds-wifi/scraper/venv/bin/python /opt/ds-wifi/scraper/scraper.py
 Restart=always
 RestartSec=30
 KillMode=mixed

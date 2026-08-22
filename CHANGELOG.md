@@ -30,8 +30,9 @@ Primera versión pública (Beta).
 
 ## [Unreleased]
 
-### Fixed
-- Scraper de Wiimmfi: agregado camino con cookie `cf_clearance` + User-Agent (fetch simple, fiable) además del navegador headful. El headful ahora usa Chrome 24.x + perfil persistente + Xvfb y el servicio detiene limpiamente (KillMode=mixed).
+### Changed
+- **Scraper de Wiimmfi reescrito**: ahora usa **nodriver + Google Chrome real** (pasa el reto de Cloudflare) y descarga el **listado dinámico completo de juegos** (`/stat?m=c`) con su nº de jugadores online. Se eliminaron las URLs por juego y las cookies manuales.
+- **UI de Wiimmfi**: buscador de juegos dinámico (681 juegos) + favoritos con umbral de alerta configurable. Ya no hay que pegar URLs ni tokens.
 
-### Known
-- `wiimmfi.de` está detrás de Cloudflare; el navegador headful solo pasa el reto en redes donde auto-resuelve. La cookie `cf_clearance` es el camino fiable (caduca ~30–60 min).
+### Removed
+- Campo manual de cookie `cf_clearance` y User-Agent (ya no hace falta).

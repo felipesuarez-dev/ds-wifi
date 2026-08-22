@@ -20,7 +20,7 @@ const DEFAULTS = {
   dhcpEnd: '192.168.50.200', leaseTime: '12h', dnsClients: '1.1.1.1',
   isolation: true, autoOffMinutes: 0, pin: '',
   wifiInterface: 'wlp2s0', lanInterface: 'enp1s0',
-  stats: { enabled: true, intervalMinutes: 3, alerts: true, games: [], cfClearance: '', userAgent: '' }
+  stats: { enabled: true, intervalMinutes: 3, alerts: true, games: [] }
 };
 
 function ipToInt(ip) { return ip.split('.').reduce((a, b) => (a << 8) + (+b >>> 0), 0) >>> 0; }
@@ -45,8 +45,6 @@ function loadConfig() {
   cfg.macList = normalizeMacList(cfg.macList);
   if (!cfg.stats || typeof cfg.stats !== 'object') cfg.stats = DEFAULTS.stats;
   if (!Array.isArray(cfg.stats.games)) cfg.stats.games = [];
-  if (cfg.stats.cfClearance === undefined) cfg.stats.cfClearance = '';
-  if (cfg.stats.userAgent === undefined) cfg.stats.userAgent = '';
   return cfg;
 }
 
@@ -200,7 +198,7 @@ const server = http.createServer(async (req, res) => {
   const cfg = loadConfig();
 
   const isApi = url.startsWith('/api/');
-  const isPublic = url === '/api/status' || url === '/api/logs' || url === '/api/stats';
+  const isPublic = url === '/api/status' || url === '/api/logs' || url === '/api/stats' || url === '/api/games';
   if (isApi && !isPublic && cfg.pin) {
     const pin = req.headers['x-pin'] || '';
     if (pin !== cfg.pin) return send(res, 401, { error: 'PIN inválido' });
@@ -224,22 +222,32 @@ const server = http.createServer(async (req, res) => {
     }
     if (url === '/api/stats') {
       const raw = readStatsFile();
-      const results = (raw && raw.results) || {};
-      const games = cfg.stats.games.map(g => {
-        const r = results[g.id] || {};
-        const onlineCount = typeof r.onlineCount === 'number' ? r.onlineCount : null;
+      const allGames = (raw && raw.games) || [];
+      const byId = {};
+      allGames.forEach(g => { byId[g.id] = g; });
+      const favorites = (cfg.stats.games || []).map(f => {
+        const g = byId[f.id] || {};
+        const online = typeof g.online === 'number' ? g.online : null;
         return {
-          id: g.id, name: g.name, url: g.url, threshold: g.threshold || 0,
-          onlineCount, reachable: !!r.reachable, overThreshold: onlineCount !== null && onlineCount >= (g.threshold || 0)
+          id: f.id, name: f.name || g.name || f.id, threshold: f.threshold || 0,
+          onlineCount: online, status: g.status || '',
+          overThreshold: online !== null && online >= (f.threshold || 0)
         };
       });
       return send(res, 200, {
         enabled: !!cfg.stats.enabled,
         alertsEnabled: !!cfg.stats.alerts,
-        cookieConfigured: !!(cfg.stats.cfClearance && cfg.stats.userAgent),
         updatedAt: (raw && raw.updatedAt) || null,
-        games
+        gameCount: allGames.length,
+        favorites
       });
+    }
+    if (url === '/api/games') {
+      const raw = readStatsFile();
+      const q = (req.url.split('?')[1] || '').replace(/q=/, '').toLowerCase();
+      let games = (raw && raw.games) || [];
+      if (q) games = games.filter(g => g.name.toLowerCase().includes(q));
+      return send(res, 200, { updatedAt: (raw && raw.updatedAt) || null, games: games.slice(0, 100) });
     }
     if (url === '/api/toggle' && req.method === 'POST') {
       const body = await readBody(req);
