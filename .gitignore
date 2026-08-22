@@ -7,3 +7,6 @@ config/leases
 
 # logs
 logs/
+
+# config local de Engram
+.engram/
