@@ -12,6 +12,17 @@
 
 <img src="assets/screenshot.png" alt="Interfaz web de ds-wifi" width="100%" />
 
+<table>
+  <tr>
+    <td width="50%"><img src="assets/screenshot-favorites.png" alt="Mis juegos: favorito con alerta en vivo" width="100%"></td>
+    <td width="50%"><img src="assets/screenshot-games.png" alt="Selector de juegos de Wiimmfi con buscador" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Mis juegos</b> — favoritos con jugadores online y alerta</td>
+    <td align="center"><b>Selector</b> — buscá cualquier juego y seguílo</td>
+  </tr>
+</table>
+
 </div>
 
 ---
@@ -163,7 +174,7 @@ sudoers/dswifi         # permisos acotados para el usuario dswifi
 
 MIT © 2026 — ver [LICENSE](LICENSE).
 
-[version-badge]: https://img.shields.io/badge/versi%C3%B3n-0.1.0-34d399?style=flat-square
+[version-badge]: https://img.shields.io/badge/versi%C3%B3n-0.2.0-34d399?style=flat-square
 [status-badge]: https://img.shields.io/badge/estado-Beta-fbbf24?style=flat-square
 [license-badge]: https://img.shields.io/badge/licencia-MIT-a8d8a8?style=flat-square
 [bash-badge]: https://img.shields.io/badge/bash-4EAA25?style=flat-square&logo=gnubash&logoColor=white

@@ -28,11 +28,21 @@ Primera versión pública (Beta).
 ### Changed
 - `macList` ahora almacena objetos `{ mac, name }` (con migración automática del formato anterior).
 
-## [Unreleased]
+## [0.2.0] - 2026-08-22
+
+Segunda versión (Beta): seguimiento dinámico de juegos de Wiimmfi.
+
+### Added
+- **Listado dinámico de juegos de Wiimmfi**: el scraper descarga los ~680 juegos con su nº de jugadores online desde una sola página (`/stat?m=c`), sin configurar nada.
+- **Buscador de juegos** en la interfaz: escribes el nombre, ves cuánta gente hay online y lo agregas a tus favoritos con un toque.
+- Botón de cierre (X) en todos los modales, cierre al tocar fuera y con Escape.
 
 ### Changed
-- **Scraper de Wiimmfi reescrito**: ahora usa **nodriver + Google Chrome real** (pasa el reto de Cloudflare) y descarga el **listado dinámico completo de juegos** (`/stat?m=c`) con su nº de jugadores online. Se eliminaron las URLs por juego y las cookies manuales.
-- **UI de Wiimmfi**: buscador de juegos dinámico (681 juegos) + favoritos con umbral de alerta configurable. Ya no hay que pegar URLs ni tokens.
+- **Scraper reescrito**: ahora usa **nodriver + Google Chrome real** (pasa el reto de Cloudflare) en lugar de Puppeteer + stealth, que quedaba bloqueado.
+- **"Wiimmfi · Mis juegos"** pasa a listado dinámico + favoritos con umbral de alerta configurable (toca 🎯 para cambiarlo).
+- El scraper corre como servicio systemd aparte (`ds-wifi-scraper.service`) con Xvfb.
 
 ### Removed
-- Campo manual de cookie `cf_clearance` y User-Agent (ya no hace falta).
+- URLs por juego y cookies `cf_clearance` / User-Agent manuales (ya no hacen falta).
+
+## [0.1.0] - 2026-08-22
