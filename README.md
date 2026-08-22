@@ -4,7 +4,7 @@
 
 # ds-wifi
 
-**Punto de acceso WiFi para Nintendo DS / DS Lite, con control total de la red desde el celular.** Conecta tu consola a los servidores comunitarios de [Wiimmfi](https://wiimmfi.de) o a otros servicios en línea — tú decides la configuración de la red.
+**Punto de acceso WiFi para Nintendo DS / DS Lite, con control total de la red desde el celular.** Crea una red compatible con la DS (abierta o WEP) para que tu consola se conecte. Llegar a [Wiimmfi](https://wiimmfi.de) u otros servidores es decisión tuya: se hace configurando el DNS en la propia DS.
 
 [![License][license-badge]](LICENSE)
 
@@ -22,7 +22,7 @@ La Nintendo DS / DS Lite solo soporta WiFi **802.11b** con seguridad **abierta o
 
 `ds-wifi` resuelve eso con un punto de acceso dedicado y una **interfaz web** desde la que controlas la red: la enciendes cuando juegas, la apagas cuando terminas, y ajustas SSID, filtro MAC, DHCP y aislamiento sin tocar el router.
 
-> **Sobre Wiimmfi**: son **servidores comunitarios** (hechos por fans) que reemplazan a Nintendo WFC. Este proyecto **no está afiliado** a Wiimmfi; simplemente te ayuda a conectar tu DS a esos servidores (o a cualquier otro) a través de una red que controlas tú.
+> **Sobre Wiimmfi**: son **servidores comunitarios** (hechos por fans) que reemplazan a Nintendo WFC. `ds-wifi` **no te conecta a Wiimmfi** ni está afiliado a ellos: solo crea la red WiFi. La conexión a esos servidores (o a cualquier otro) la decides tú, configurando el DNS en tu DS.
 
 ## Solución
 
