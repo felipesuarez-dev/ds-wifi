@@ -6,18 +6,21 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#08080d">
 <title>DS WiFi</title>
+<link rel="icon" href="assets/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-:root{--bg:#08080d;--card:#0e0e15;--card-b:#171722;--card-c:#1d1d2b;--mint:#34d399;--mint-2:#2ab88c;--mint-g:rgba(52,211,153,.14);--mint-s:rgba(52,211,153,.06);--red:#f43f5e;--red-g:rgba(244,63,94,.12);--amber:#fbbf24;--amber-g:rgba(251,191,36,.12);--t:#e7e7ef;--t2:#7a7a94;--t3:#3a3a4a;--r:16px}
+:root{--bg:#08080d;--card:#0e0e15;--card-b:#171722;--card-c:#1d1d2b;--mint:#34d399;--mint-2:#2ab88c;--mint-g:rgba(52,211,153,.14);--mint-s:rgba(52,211,153,.06);--red:#f43f5e;--red-g:rgba(244,63,94,.12);--amber:#fbbf24;--amber-g:rgba(251,191,36,.12);--blue:#60a5fa;--blue-g:rgba(96,165,250,.12);--t:#e7e7ef;--t2:#7a7a94;--t3:#3a3a4a;--r:16px}
 html,body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t);min-height:100dvh;overflow-x:hidden}
-body{display:flex;flex-direction:column;align-items:center;padding:0 14px 40px;background-image:radial-gradient(ellipse 700px 360px at 50% -8%,rgba(52,211,153,.06) 0%,transparent 65%)}
-.hdr{width:100%;max-width:500px;padding:20px 0 6px;display:flex;align-items:center;justify-content:space-between}
+body{display:flex;flex-direction:column;align-items:center;padding:0 14px 24px;background-image:radial-gradient(ellipse 700px 360px at 50% -8%,rgba(52,211,153,.06) 0%,transparent 65%)}
+.brand{width:100%;max-width:500px;display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:10px 2px 2px}
+.brand img{width:16px;height:16px;border-radius:4px}
+.brand span{font-size:10px;color:var(--t3);font-weight:600;letter-spacing:.4px}
+.hdr{width:100%;max-width:500px;padding:12px 0 6px;display:flex;align-items:center;justify-content:space-between}
 .hdr-l{display:flex;align-items:center;gap:11px}
-.hdr-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(140deg,var(--mint),var(--mint-2));display:flex;align-items:center;justify-content:center;color:var(--bg);box-shadow:0 4px 16px rgba(52,211,153,.25)}
-.hdr-logo svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.hdr-t1{font-size:15px;font-weight:700}
+.app-logo{width:38px;height:38px;border-radius:10px;flex-shrink:0}
+.hdr-t1{font-size:16px;font-weight:700}
 .hdr-t2{font-size:10px;color:var(--t2);letter-spacing:.4px;font-family:'IBM Plex Mono',monospace}
 .hdr-r{display:flex;align-items:center;gap:7px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--t3);transition:.4s}
@@ -38,6 +41,8 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 14px 40px;b
 .power-btn:active{transform:scale(.92)}
 .power-label{font-size:17px;font-weight:700}
 .power-sub{font-size:11px;color:var(--t2);font-family:'IBM Plex Mono',monospace}
+.timers{display:flex;gap:8px;width:100%}
+.timers .btn{height:38px;font-size:12px;flex:1}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .cell{background:var(--card-b);border-radius:12px;padding:12px 14px}
 .cell-l{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1.6px;font-weight:700;margin-bottom:5px}
@@ -46,6 +51,7 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 14px 40px;b
 .badge.on{background:var(--mint-g);color:var(--mint)}
 .badge.off{background:var(--red-g);color:var(--red)}
 .badge.warn{background:var(--amber-g);color:var(--amber)}
+.badge.blue{background:var(--blue-g);color:var(--blue)}
 .clients{display:flex;flex-direction:column;gap:8px}
 .client{display:flex;align-items:center;gap:12px;background:var(--card-b);border-radius:12px;padding:11px 14px}
 .client-ic{width:34px;height:34px;border-radius:10px;background:var(--mint-s);color:var(--mint);display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -78,23 +84,58 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 14px 40px;b
 .switch.on{background:var(--mint)}
 .switch:after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)}
 .switch.on:after{left:23px}
+.mac-input{display:flex;align-items:center;gap:4px}
+.mac-input input{width:100%;text-align:center;text-transform:lowercase;font-size:15px;padding:12px 4px;letter-spacing:0}
+.mac-input .sep{color:var(--t3);font-family:'IBM Plex Mono',monospace;font-weight:600}
+.mac-vendor{font-size:10px;color:var(--mint);font-family:'IBM Plex Mono',monospace;min-height:14px;letter-spacing:.3px}
 .mac-list{display:flex;flex-direction:column;gap:6px}
-.mac-item{display:flex;align-items:center;gap:8px;background:var(--card-b);border-radius:11px;padding:9px 14px}
-.mac-item .mac{flex:1;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:1px}
-.mac-item .del{background:none;border:none;color:var(--t2);cursor:pointer;font-size:16px;padding:4px 8px;border-radius:6px}
-.mac-item .del:hover{color:var(--red)}
-.mac-add{display:flex;gap:8px}
-.mac-add input{flex:1;background:var(--card-b);border:1px solid var(--t3);border-radius:11px;color:var(--t);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:11px 14px;outline:none;text-transform:lowercase}
-.mac-add input:focus{border-color:var(--mint)}
+.mac-item{display:flex;align-items:center;gap:10px;background:var(--card-b);border-radius:11px;padding:10px 14px}
+.mac-item .ic{width:30px;height:30px;border-radius:8px;background:var(--mint-s);color:var(--mint);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mac-item .ic svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mac-item .info{flex:1;min-width:0}
+.mac-item .nm{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mac-item .mc{font-size:9.5px;color:var(--t3);font-family:'IBM Plex Mono',monospace;letter-spacing:.5px;margin-top:1px}
+.mac-item .dot{width:7px;height:7px;flex-shrink:0}
+.mac-item .act{display:flex;gap:2px}
+.mac-item .act button{background:none;border:none;color:var(--t3);cursor:pointer;font-size:14px;padding:6px;border-radius:6px;line-height:1}
+.mac-item .act button:hover{color:var(--mint)}
+.mac-item .act .del:hover{color:var(--red)}
+.act-row{display:flex;gap:8px}
+.act-row .btn{height:38px;font-size:11px;flex:1}
 .btn{display:flex;align-items:center;justify-content:center;height:50px;border-radius:13px;border:none;background:linear-gradient(140deg,var(--mint),var(--mint-2));color:var(--bg);font-weight:700;font-size:14px;cursor:pointer;letter-spacing:.3px;box-shadow:0 4px 18px rgba(52,211,153,.25);width:100%;transition:.15s}
 .btn:active{transform:scale(.97)}
 .btn.ghost{background:var(--card-b);color:var(--t2);box-shadow:none;border:1px solid var(--t3);font-weight:600}
+.btn.danger{background:var(--red-g);color:var(--red);box-shadow:none;border:1px solid rgba(244,63,94,.2)}
+.alert-banner{display:none;align-items:center;gap:10px;background:var(--amber-g);border:1px solid rgba(251,191,36,.3);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:12px;font-weight:600;color:var(--amber)}
+.alert-banner.show{display:flex}
+.alert-banner .ic{width:20px;height:20px;flex-shrink:0}
+.games{display:flex;flex-direction:column;gap:8px}
+.game{display:flex;align-items:center;gap:12px;background:var(--card-b);border-radius:12px;padding:12px 14px}
+.game .cnt{font-size:22px;font-weight:700;font-family:'IBM Plex Mono',monospace;min-width:44px;text-align:center}
+.game .cnt.null{color:var(--t3);font-size:13px}
+.game .ginfo{flex:1;min-width:0}
+.game .gnm{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.game .gst{font-size:9.5px;color:var(--t3);font-family:'IBM Plex Mono',monospace;margin-top:2px}
+.game a{color:var(--blue);text-decoration:none;font-size:11px;font-weight:600;white-space:nowrap}
+.game a:hover{text-decoration:underline}
+.game .pin{background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px;padding:6px}
+.game .pin.pinned{color:var(--amber)}
+.game .del{background:none;border:none;color:var(--t3);cursor:pointer;font-size:15px;padding:6px}
+.game .del:hover{color:var(--red)}
 .log-box{background:#0a0a10;border:1px solid var(--card-b);border-radius:12px;padding:14px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;line-height:1.6;color:var(--t2);max-height:320px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
 .log-box .ok{color:var(--mint)}
 .log-box .warn{color:var(--amber)}
 .log-box .err{color:var(--red)}
 .log-bar{display:flex;gap:8px;margin-top:10px}
 .log-bar .btn{height:38px;font-size:12px;flex:1}
+.guide ol{padding-left:18px;display:flex;flex-direction:column;gap:8px}
+.guide li{font-size:12px;color:var(--t2);line-height:1.5}
+.guide li b{color:var(--t)}
+.guide .dns{background:var(--card-b);border-radius:10px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--mint);margin-top:2px}
+.diag-row{display:flex;align-items:center;gap:10px;background:var(--card-b);border-radius:10px;padding:10px 14px;font-size:12px}
+.diag-row .st{width:8px;height:8px;border-radius:50%;background:var(--t3);flex-shrink:0}
+.diag-row .st.ok{background:var(--mint)}
+.diag-row .st.bad{background:var(--red)}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--mint);color:var(--bg);font-size:13px;font-weight:600;padding:12px 22px;border-radius:12px;opacity:0;transition:.3s;z-index:50;box-shadow:0 6px 24px rgba(0,0,0,.4)}
 .toast.show{opacity:1;transform:translateX(-50%)}
 .toast.err{background:var(--red);color:#fff}
@@ -105,14 +146,23 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 14px 40px;b
 .modal-box p{font-size:12px;color:var(--t2);margin-bottom:16px}
 .modal-box input{width:100%;background:var(--card-b);border:1px solid var(--t3);border-radius:11px;color:var(--t);font-family:'IBM Plex Mono',monospace;font-size:16px;padding:13px;outline:none;text-align:center;letter-spacing:5px}
 .modal-box input:focus{border-color:var(--mint)}
+footer{width:100%;max-width:500px;margin-top:26px;padding:16px 0 4px;text-align:center;border-top:1px solid var(--card-b);display:flex;flex-direction:column;align-items:center;gap:6px}
+footer .fline{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t3);font-weight:600}
+footer img{width:15px;height:15px;border-radius:4px}
+footer .fsub{font-size:9.5px;color:var(--t3);font-family:'IBM Plex Mono',monospace;letter-spacing:.4px}
 </style>
 </head>
 <body>
 
+<div class="brand">
+  <img src="assets/pumasoft.png" alt="PumaSoft">
+  <span>PumaSoft</span>
+</div>
+
 <div class="hdr">
   <div class="hdr-l">
-    <div class="hdr-logo"><svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg></div>
-    <div><div class="hdr-t1">DS WiFi</div><div class="hdr-t2">Nintendo DS · Wiimmfi</div></div>
+    <img src="assets/logo.png" alt="DS WiFi" class="app-logo">
+    <div><div class="hdr-t1">DS WiFi</div><div class="hdr-t2">Punto de acceso · control de red</div></div>
   </div>
   <div class="hdr-r"><span class="dot" id="dot"></span><span class="hdr-st" id="hst">Cargando</span></div>
 </div>
@@ -125,6 +175,11 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 14px 40px;b
     </button>
     <div class="power-label" id="pwLabel">Apagada</div>
     <div class="power-sub" id="pwSub">—</div>
+    <div class="timers">
+      <button class="btn ghost" onclick="turnOnFor(60)">1h</button>
+      <button class="btn ghost" onclick="turnOnFor(120)">2h</button>
+      <button class="btn ghost" onclick="turnOnFor(0)">Indefinido</button>
+    </div>
   </div>
 
   <div class="card">
@@ -144,10 +199,25 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 14px 40px;b
     <div class="clients" id="clients"><div class="empty">Sin clientes</div></div>
   </div>
 
+  <div class="card">
+    <div class="card-title">Wiimmfi · Mis juegos</div>
+    <div class="alert-banner" id="alertBanner"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z"/></svg><span id="alertTxt"></span></div>
+    <div class="games" id="games"><div class="empty">Sin juegos configurados</div></div>
+    <div style="height:10px"></div>
+    <div class="switch-row" style="padding:10px 14px">
+      <div><div class="lbl">Alertas</div><div class="sub">Avisa al superar el umbral</div></div>
+      <button class="switch" id="f-alerts" onclick="sw(this)"></button>
+    </div>
+    <div class="field" style="margin-top:10px"><label>Intervalo de consulta (min)</label><input id="f-interval" type="number" min="1" placeholder="3"></div>
+    <div style="height:10px"></div>
+    <div class="hint">Agrega juegos para ver cuánta gente hay online en Wiimmfi.</div>
+  </div>
+
   <div class="tog" id="togCfg" onclick="tg('secCfg','togCfg')">
     <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>Configuración
   </div>
   <div class="col" id="secCfg">
+
     <div class="card">
       <div class="card-title">Red inalámbrica</div>
       <div style="display:flex;flex-direction:column;gap:12px">
@@ -166,23 +236,28 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 14px 40px;b
           </div>
         </div>
         <div class="switch-row">
-          <div><div class="lbl">Ocultar SSID</div><div class="sub">La DS no lo verá en la lista (hay que tipearlo)</div></div>
+          <div><div class="lbl">Ocultar SSID</div><div class="sub">La DS no lo verá en la lista</div></div>
           <button class="switch" id="f-hidden" onclick="sw(this)"></button>
         </div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-title">Acceso · filtro MAC</div>
+      <div class="card-title">Acceso · dispositivos</div>
       <div style="display:flex;flex-direction:column;gap:12px">
         <div class="switch-row">
           <div><div class="lbl">Filtrar por MAC</div><div class="sub">Solo entran los dispositivos listados</div></div>
           <button class="switch" id="f-macfilter" onclick="sw(this)"></button>
         </div>
+        <div class="field"><label>Nombre (opcional)</label><input id="f-name" placeholder="ej: DS de Felipe"></div>
+        <div class="mac-input" id="macInput"></div>
+        <div class="mac-vendor" id="macVendor"></div>
+        <button class="btn" onclick="addMac()">Agregar dispositivo</button>
         <div class="mac-list" id="macList"></div>
-        <div class="mac-add">
-          <input id="f-macadd" placeholder="AA:BB:CC:DD:EE:FF" maxlength="17">
-          <button class="btn ghost" style="width:auto;height:auto;padding:0 20px" onclick="addMac()">+</button>
+        <div class="act-row">
+          <button class="btn ghost" onclick="exportMacs()">Exportar</button>
+          <button class="btn ghost" onclick="document.getElementById('importFile').click()">Importar</button>
+          <input type="file" id="importFile" accept=".json" style="display:none" onchange="importMacs(event)">
         </div>
         <div class="hint">La MAC de tu DS está en: juego → Nintendo WFC → Opciones → <b>Información del sistema</b> (Nintendo WFC ID).</div>
       </div>
@@ -219,7 +294,34 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 14px 40px;b
     </div>
 
     <button class="btn" onclick="saveCfg()">Guardar configuración</button>
-    <div class="hint" style="text-align:center">DNS Wiimmfi para la DS: <b>178.62.43.212</b> (Kaeru) o 95.217.77.181</div>
+  </div>
+
+  <div class="tog" id="togGuide" onclick="tg('secGuide','togGuide')">
+    <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>Ayuda · conectar una DS
+  </div>
+  <div class="col" id="secGuide">
+    <div class="card">
+      <div class="card-title">Guía de conexión</div>
+      <div class="guide">
+        <ol>
+          <li>Inserta un juego con WFC (Mario Kart DS, etc.) → <b>NINTENDO WFC</b> → <b>Nintendo WFC Settings</b>.</li>
+          <li>Para la MAC: <b>Options → System Information</b>. El <b>Nintendo WFC ID</b> es la MAC (12 caracteres).</li>
+          <li>Agrega esa MAC aquí en <b>Configuración → Acceso</b> (con los dos puntos).</li>
+          <li>Enciende la red con el botón.</li>
+          <li>En la DS: <b>Ajustes de conexión → Buscar punto de acceso</b> → elige el SSID (sin candado).</li>
+          <li><b>Cambiar ajustes → DNS manual</b>:</li>
+        </ol>
+        <div class="dns">Primario: 178.62.43.212<br>Secundario: 1.1.1.1</div>
+        <div class="hint" style="margin-top:8px">178.62.43.212 es Kaeru (rutea a Wiimmfi). Algunos juegos con SSL necesitan el parche NoSSL.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Diagnóstico</div>
+      <div class="diag-row"><span class="st" id="diagInet"></span><span>Internet</span></div>
+      <div class="diag-row" style="margin-top:6px"><span class="st" id="diagWifi"></span><span>Wiimmfi alcanzable</span></div>
+      <div style="height:10px"></div>
+      <button class="btn ghost" onclick="runDiag()">Probar conexión</button>
+    </div>
   </div>
 
   <div class="tog" id="togLogs" onclick="tgLogs()">
@@ -236,21 +338,63 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 14px 40px;b
   </div>
 </div>
 
+<footer>
+  <div class="fline"><img src="assets/pumasoft.png" alt="PumaSoft"> Powered by PumaSoft</div>
+  <div class="fsub">© 2026 · Licencia MIT</div>
+</footer>
+
 <div class="toast" id="toast"></div>
 
 <div class="modal" id="pinModal">
   <div class="modal-box">
-    <h3>PIN de acceso</h3>
-    <p>Esta interfaz está protegida.</p>
+    <h3>PIN de acceso</h3><p>Esta interfaz está protegida.</p>
     <input id="pinInput" type="password" placeholder="••••">
     <div style="height:14px"></div>
     <button class="btn" onclick="submitPin()">Entrar</button>
   </div>
 </div>
 
+<div class="modal" id="nameModal">
+  <div class="modal-box">
+    <h3>Renombrar dispositivo</h3><p id="nameMac" style="font-family:'IBM Plex Mono',monospace"></p>
+    <input id="nameInput" placeholder="Nombre">
+    <div style="height:14px"></div>
+    <button class="btn" onclick="saveName()">Guardar</button>
+  </div>
+</div>
+
+<div class="modal" id="gameModal">
+  <div class="modal-box">
+    <h3>Agregar juego</h3><p>Sigue los jugadores online en Wiimmfi.</p>
+    <input id="gameName" placeholder="Nombre (ej: Mario Kart DS)">
+    <div style="height:8px"></div>
+    <input id="gameUrl" placeholder="URL de stats (wiimmfi.de)">
+    <div style="height:8px"></div>
+    <input id="gameThreshold" type="number" min="0" placeholder="Umbral de alerta (ej: 3)">
+    <div style="height:14px"></div>
+    <button class="btn" onclick="saveGame()">Guardar</button>
+  </div>
+</div>
+
 <script>
 var PIN = localStorage.getItem('ds-wifi-pin') || '';
-var timer = null, logsTimer = null, logsOpen = false;
+var cfg = null, timer = null, logsTimer = null, statsTimer = null, logsOpen = false;
+var prevAlerts = {}, knownClients = {}, lastDiag = null;
+var editMac = null;
+
+var OUI = {
+  '00:09:BF':'Nintendo','00:17:AB':'Nintendo','00:1E:A9':'Nintendo (DS/Wii)','00:1F:C5':'Nintendo',
+  '00:22:4C':'Nintendo','00:23:CC':'Nintendo','00:24:1E':'Nintendo','00:25:A0':'Nintendo',
+  '00:27:09':'Nintendo','58:BD:A3':'Nintendo','98:B6:E9':'Nintendo','B8:AE:6E':'Nintendo',
+  'CC:9E:00':'Nintendo','D8:6B:F7':'Nintendo','E0:0C:7F':'Nintendo','E8:4E:CE':'Nintendo',
+  'F4:0F:24':'Nintendo','3C:22:FB':'Apple','3C:D0:F8':'Apple','00:1E:C2':'Apple',
+  '34:AB:95':'Apple','58:1F:AA':'Apple','F0:18:98':'Apple','00:23:39':'Samsung',
+  '00:26:5D':'Samsung','00:0A:D9':'Samsung','00:1A:73':'Samsung','00:09:4F':'Sony',
+  '00:14:5E':'Sony','00:15:C5':'Sony','00:0E:6A':'Sony','00:19:FB':'Intel',
+  '00:1B:77':'Intel','00:21:5D':'Intel','00:0C:F1':'Intel','00:1D:D8':'Microsoft',
+  '00:50:F2':'Microsoft','00:03:6D':'Microsoft','00:12:8F':'Google','00:1A:11':'Google',
+  'F4:5C:89':'Google','A4:77:33':'Google'
+};
 
 function api(method, path, body) {
   var opts = { method: method, headers: {} };
@@ -287,6 +431,86 @@ function sigClass(s) {
 function esc(s) {
   return String(s || '').replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; });
 }
+function nameOf(mac) {
+  if (!cfg || !cfg.macList) return '';
+  var e = cfg.macList.find(function (m) { return m.mac === mac; });
+  return e && e.name ? e.name : '';
+}
+function timeAgo(ts) {
+  if (!ts) return '';
+  var s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (s < 60) return 'hace ' + s + ' s';
+  if (s < 3600) return 'hace ' + Math.floor(s / 60) + ' min';
+  if (s < 86400) return 'hace ' + Math.floor(s / 3600) + ' h';
+  return 'hace ' + Math.floor(s / 86400) + ' d';
+}
+
+// ---------- MAC segmented input ----------
+function buildMacInput() {
+  var box = document.getElementById('macInput');
+  box.innerHTML = '';
+  for (var i = 0; i < 6; i++) {
+    var inp = document.createElement('input');
+    inp.maxLength = 2;
+    inp.placeholder = '00';
+    inp.autocomplete = 'off';
+    inp.spellcheck = false;
+    inp.dataset.idx = i;
+    inp.addEventListener('input', onMacInput);
+    inp.addEventListener('keydown', onMacKey);
+    inp.addEventListener('paste', onMacPaste);
+    inp.addEventListener('focus', function () { this.select(); });
+    box.appendChild(inp);
+    if (i < 5) {
+      var sep = document.createElement('span');
+      sep.className = 'sep'; sep.textContent = ':';
+      box.appendChild(sep);
+    }
+  }
+}
+function macBoxes() { return Array.prototype.slice.call(document.querySelectorAll('#macInput input')); }
+function getMacFromBoxes() {
+  return macBoxes().map(function (b) { return (b.value || '').trim().toLowerCase(); }).join(':');
+}
+function onMacInput(e) {
+  var v = e.target.value.replace(/[^0-9a-fA-F]/g, '');
+  e.target.value = v;
+  if (v.length === 2) {
+    var boxes = macBoxes();
+    var idx = boxes.indexOf(e.target);
+    if (idx < boxes.length - 1) boxes[idx + 1].focus();
+  }
+  updateVendor();
+}
+function onMacKey(e) {
+  if (e.key === 'Backspace' && e.target.value === '') {
+    var boxes = macBoxes();
+    var idx = boxes.indexOf(e.target);
+    if (idx > 0) { boxes[idx - 1].focus(); boxes[idx - 1].select(); }
+  }
+}
+function onMacPaste(e) {
+  e.preventDefault();
+  var txt = (e.clipboardData.getData('text') || '').replace(/[^0-9a-fA-F]/g, '');
+  if (txt.length >= 12) {
+    var parts = txt.slice(0, 12).match(/.{2}/g);
+    macBoxes().forEach(function (b, i) { b.value = parts[i] || ''; });
+    updateVendor();
+  }
+}
+function updateVendor() {
+  var m = getMacFromBoxes();
+  var key = m.slice(0, 8).toUpperCase();
+  var el = document.getElementById('macVendor');
+  var vendor = OUI[key];
+  el.textContent = vendor ? ('Fabricante: ' + vendor) : (m.length >= 8 ? 'Fabricante: —' : '');
+}
+function resetMacInput() {
+  macBoxes().forEach(function (b) { b.value = ''; });
+  updateVendor();
+}
+
+// ---------- status ----------
 function setState(st) {
   var dot = document.getElementById('dot'), hst = document.getElementById('hst');
   var pw = document.getElementById('pw'), label = document.getElementById('pwLabel');
@@ -307,11 +531,26 @@ function setState(st) {
   document.getElementById('i-iso').innerHTML = st.config.isolation ? '<span class="badge on">ON</span>' : '<span class="badge off">OFF</span>';
   document.getElementById('i-mac').innerHTML = st.config.macFilter ? '<span class="badge warn">ON</span>' : '<span class="badge off">OFF</span>';
 
+  // detección de "se conectó" en vivo
+  var nowSet = {};
+  (st.clients || []).forEach(function (c) { nowSet[c.mac] = true; });
+  Object.keys(nowSet).forEach(function (m) {
+    if (!knownClients[m] && st.active) {
+      var nm = nameOf(m) || m;
+      toast('🟢 ' + esc(nm) + ' se conectó');
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('DS WiFi', { body: nm + ' se conectó' });
+      }
+    }
+  });
+  knownClients = nowSet;
+
   var box = document.getElementById('clients');
   if (!st.clients.length) { box.innerHTML = '<div class="empty">Sin clientes</div>'; }
   else {
     box.innerHTML = st.clients.map(function (c) {
-      var name = c.host || c.ip || c.mac;
+      var nm = nameOf(c.mac);
+      var name = nm || c.host || c.ip || c.mac;
       var sig = c.signal ? (c.signal + ' dBm') : '';
       return '<div class="client"><div class="client-ic"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="18" x2="12" y2="18"/></svg></div>' +
         '<div class="client-info"><div class="client-name">' + esc(name) + '</div>' +
@@ -319,7 +558,261 @@ function setState(st) {
         '<div class="client-sig ' + sigClass(c.signal) + '">' + sig + '</div></div>';
     }).join('');
   }
+  renderMacs(cfg ? (cfg.macList || []) : [], st.clients || []);
 }
+
+// ---------- MAC list ----------
+function renderMacs(list, clients) {
+  var live = {};
+  (clients || []).forEach(function (c) { live[c.mac] = true; });
+  var box = document.getElementById('macList');
+  if (!list.length) { box.innerHTML = '<div class="empty">Sin dispositivos (agrega la MAC)</div>'; return; }
+  box.innerHTML = list.map(function (m) {
+    var online = live[m.mac];
+    return '<div class="mac-item">' +
+      '<div class="ic"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="18" x2="12" y2="18"/></svg></div>' +
+      '<div class="info"><div class="nm">' + (m.name ? esc(m.name) : '<span style="color:var(--t3)">Sin nombre</span>') + '</div>' +
+      '<div class="mc">' + m.mac + '</div></div>' +
+      '<span class="dot ' + (online ? 'on' : '') + '"></span>' +
+      '<div class="act">' +
+      '<button title="Copiar" onclick="copyMac(\'' + m.mac + '\')">⧉</button>' +
+      '<button title="Renombrar" onclick="openName(\'' + m.mac + '\')">✎</button>' +
+      '<button class="del" title="Eliminar" onclick="delMac(\'' + m.mac + '\')">✕</button>' +
+      '</div></div>';
+  }).join('');
+}
+function copyMac(mac) {
+  navigator.clipboard.writeText(mac).then(function () { toast('MAC copiada'); })
+    .catch(function () { toast('No se pudo copiar', true); });
+}
+function openName(mac) {
+  editMac = mac;
+  document.getElementById('nameMac').textContent = mac;
+  document.getElementById('nameInput').value = nameOf(mac);
+  document.getElementById('nameModal').classList.add('open');
+  setTimeout(function () { document.getElementById('nameInput').focus(); }, 100);
+}
+function saveName() {
+  var name = document.getElementById('nameInput').value.trim();
+  document.getElementById('nameModal').classList.remove('open');
+  if (!editMac) return;
+  api('PUT', '/whitelist/' + editMac, { name: name }).then(function (r) {
+    if (r.ok) { cfg.macList = r.macList; renderMacs(r.macList); toast('Nombre actualizado'); }
+  });
+}
+function addMac() {
+  var mac = getMacFromBoxes();
+  if (!/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/.test(mac)) { toast('Completa los 6 bloques', true); return; }
+  var name = document.getElementById('f-name').value.trim();
+  api('POST', '/whitelist', { mac: mac, name: name }).then(function (r) {
+    if (r.ok) {
+      cfg.macList = r.macList;
+      document.getElementById('f-name').value = '';
+      resetMacInput();
+      renderMacs(r.macList);
+      toast('Dispositivo agregado');
+    } else toast(r.error || 'MAC inválida', true);
+  });
+}
+function delMac(mac) {
+  api('DELETE', '/whitelist/' + mac).then(function (r) {
+    if (r.ok) { cfg.macList = r.macList; renderMacs(r.macList); toast('Dispositivo quitado'); }
+  });
+}
+function exportMacs() {
+  api('GET', '/whitelist/export').then(function (r) {
+    var blob = new Blob([JSON.stringify(r, null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'ds-wifi-macs.json';
+    a.click();
+  });
+}
+function importMacs(ev) {
+  var f = ev.target.files[0];
+  if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function () {
+    try {
+      var data = JSON.parse(rd.result);
+      api('POST', '/whitelist/import', { macList: data.macList }).then(function (r) {
+        if (r.ok) { cfg.macList = r.macList; renderMacs(r.macList); toast('Lista importada'); }
+        else toast(r.error || 'Error', true);
+      });
+    } catch (e) { toast('JSON inválido', true); }
+    ev.target.value = '';
+  };
+  rd.readAsText(f);
+}
+
+// ---------- power + config ----------
+function toggle() {
+  api('GET', '/status').then(function (st) {
+    var wantOn = !st.active;
+    api('POST', '/toggle', { action: wantOn ? 'on' : 'off' }).then(function (r) {
+      if (r.ok) { toast(wantOn ? 'Red encendida' : 'Red apagada'); poll(); if (logsOpen) loadLogs(); }
+      else toast(r.error || 'Error', true);
+    });
+  });
+}
+function turnOnFor(min) {
+  api('POST', '/config', { autoOffMinutes: min }).then(function (r) {
+    if (!r.ok) { toast((r.errors || ['Error']).join(' · '), true); return; }
+    api('POST', '/toggle', { action: 'on' }).then(function (t) {
+      if (t.ok) { toast(min === 0 ? 'Encendida (sin apagado)' : 'Encendida por ' + min + ' min'); poll(); }
+      else toast(t.error || 'Error', true);
+    });
+  });
+}
+function fillConfig(c) {
+  cfg = c;
+  document.getElementById('f-ssid').value = c.ssid;
+  document.getElementById('f-sec').value = c.security;
+  document.getElementById('f-wep').value = c.wepKey || '';
+  document.getElementById('f-apip').value = c.apIp;
+  document.getElementById('f-prefix').value = String(c.prefix);
+  document.getElementById('f-dstart').value = c.dhcpStart;
+  document.getElementById('f-dend').value = c.dhcpEnd;
+  document.getElementById('f-lease').value = c.leaseTime;
+  document.getElementById('f-dns').value = c.dnsClients;
+  document.getElementById('f-autooff').value = c.autoOffMinutes || 0;
+  document.getElementById('f-pin').value = c.pin || '';
+  document.getElementById('f-alerts').className = 'switch' + (c.stats && c.stats.alerts ? ' on' : '');
+  document.getElementById('f-interval').value = (c.stats && c.stats.intervalMinutes) || 3;
+
+  var cc = document.getElementById('f-cc'), hasCc = false;
+  for (var i = 0; i < cc.options.length; i++) if (cc.options[i].value === c.countryCode) hasCc = true;
+  if (!hasCc) { var o = document.createElement('option'); o.value = c.countryCode; o.textContent = c.countryCode; cc.appendChild(o); }
+  cc.value = c.countryCode;
+
+  var ch = document.getElementById('f-ch'); ch.innerHTML = '';
+  for (var k = 1; k <= 13; k++) { var op = document.createElement('option'); op.value = k; op.textContent = k; ch.appendChild(op); }
+  ch.value = String(c.channel);
+
+  document.getElementById('f-hidden').className = 'switch' + (c.hidden ? ' on' : '');
+  document.getElementById('f-macfilter').className = 'switch' + (c.macFilter ? ' on' : '');
+  document.getElementById('f-isolation').className = 'switch' + (c.isolation ? ' on' : '');
+  secChange();
+  renderMacs(c.macList || []);
+}
+function saveCfg() {
+  var body = {
+    ssid: document.getElementById('f-ssid').value.trim(),
+    security: document.getElementById('f-sec').value,
+    wepKey: document.getElementById('f-wep').value.trim(),
+    channel: parseInt(document.getElementById('f-ch').value, 10),
+    countryCode: document.getElementById('f-cc').value,
+    hidden: document.getElementById('f-hidden').classList.contains('on'),
+    macFilter: document.getElementById('f-macfilter').classList.contains('on'),
+    apIp: document.getElementById('f-apip').value.trim(),
+    prefix: parseInt(document.getElementById('f-prefix').value, 10),
+    dhcpStart: document.getElementById('f-dstart').value.trim(),
+    dhcpEnd: document.getElementById('f-dend').value.trim(),
+    leaseTime: document.getElementById('f-lease').value.trim(),
+    dnsClients: document.getElementById('f-dns').value.trim(),
+    isolation: document.getElementById('f-isolation').classList.contains('on'),
+    autoOffMinutes: parseInt(document.getElementById('f-autooff').value, 10) || 0,
+    pin: document.getElementById('f-pin').value.trim(),
+    stats: Object.assign({}, (cfg.stats || {}), {
+      alerts: document.getElementById('f-alerts').classList.contains('on'),
+      intervalMinutes: parseInt(document.getElementById('f-interval').value, 10) || 3
+    })
+  };
+  api('POST', '/config', body).then(function (r) {
+    if (r.ok) {
+      if (body.pin !== PIN) { PIN = body.pin; localStorage.setItem('ds-wifi-pin', PIN); }
+      toast(r.restarted ? 'Guardado (red reiniciada)' : 'Guardado');
+      api('GET', '/config').then(fillConfig);
+    } else toast((r.errors || ['Error']).join(' · '), true);
+  });
+}
+
+// ---------- Wiimmfi stats + alerts ----------
+function loadStats() {
+  api('GET', '/stats').then(function (st) {
+    renderGames(st);
+    checkAlerts(st);
+  }).catch(function () {});
+}
+function renderGames(st) {
+  var box = document.getElementById('games');
+  if (!st.games || !st.games.length) {
+    box.innerHTML = '<div class="empty">Sin juegos. Agrégalos con el botón +</div>';
+  } else {
+    box.innerHTML = st.games.map(function (g) {
+      var cnt = g.onlineCount === null ? '<span class="null">—</span>' : g.onlineCount;
+      var th = g.threshold > 0 ? (' · umbral ' + g.threshold) : '';
+      var upd = st.updatedAt ? timeAgo(st.updatedAt) : 'sin datos';
+      var over = g.overThreshold ? '<span class="badge warn">ALERTA</span>' : '';
+      return '<div class="game">' +
+        '<div class="cnt' + (g.onlineCount === null ? ' null' : '') + '">' + cnt + '</div>' +
+        '<div class="ginfo"><div class="gnm">' + esc(g.name) + over + '</div>' +
+        '<div class="gst">' + (g.reachable ? 'online' : 'no disponible') + th + ' · ' + upd + '</div></div>' +
+        '<a href="' + esc(g.url) + '" target="_blank">Stats ↗</a>' +
+        '<button class="del" title="Quitar" onclick="delGame(\'' + g.id + '\')">✕</button>' +
+        '</div>';
+    }).join('');
+  }
+  // botón agregar
+  var addBtn = document.createElement('div');
+  addBtn.style.marginTop = '4px';
+  addBtn.innerHTML = '<button class="btn ghost" style="height:38px;font-size:12px" onclick="openGame()">+ Agregar juego</button>';
+  box.appendChild(addBtn);
+}
+function checkAlerts(st) {
+  if (!st.alertsEnabled) {
+    document.getElementById('alertBanner').classList.remove('show');
+    prevAlerts = {};
+    return;
+  }
+  var now = {};
+  var msgs = [];
+  st.games.forEach(function (g) {
+    if (g.overThreshold) {
+      now[g.id] = true;
+      msgs.push(g.name + ': ' + g.onlineCount + ' online (umbral ' + g.threshold + ')');
+      if (!prevAlerts[g.id]) {
+        toast('🟡 ' + g.name + ': ' + g.onlineCount + ' jugadores online');
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('DS WiFi · Wiimmfi', { body: g.name + ': ' + g.onlineCount + ' online' });
+        }
+      }
+    }
+  });
+  prevAlerts = now;
+  var banner = document.getElementById('alertBanner');
+  var txt = document.getElementById('alertTxt');
+  if (msgs.length) { txt.textContent = '¡Jugadores online! ' + msgs.join(' · '); banner.classList.add('show'); }
+  else banner.classList.remove('show');
+}
+function openGame() {
+  document.getElementById('gameName').value = '';
+  document.getElementById('gameUrl').value = '';
+  document.getElementById('gameThreshold').value = '';
+  document.getElementById('gameModal').classList.add('open');
+}
+function saveGame() {
+  var name = document.getElementById('gameName').value.trim();
+  var url = document.getElementById('gameUrl').value.trim();
+  var threshold = parseInt(document.getElementById('gameThreshold').value, 10) || 0;
+  if (!name || !url) { toast('Faltan datos', true); return; }
+  document.getElementById('gameModal').classList.remove('open');
+  var games = (cfg.stats.games || []).slice();
+  var id = 'g' + Date.now();
+  games.push({ id: id, name: name, url: url, threshold: threshold });
+  api('POST', '/config', { stats: Object.assign({}, cfg.stats, { games: games }) }).then(function (r) {
+    if (r.ok) { toast('Juego agregado'); api('GET', '/config').then(fillConfig); loadStats(); }
+    else toast((r.errors || ['Error']).join(' · '), true);
+  });
+}
+function delGame(id) {
+  var games = (cfg.stats.games || []).filter(function (g) { return g.id !== id; });
+  api('POST', '/config', { stats: Object.assign({}, cfg.stats, { games: games }) }).then(function (r) {
+    if (r.ok) { api('GET', '/config').then(fillConfig); loadStats(); }
+  });
+}
+
+// ---------- logs + diag ----------
 function colorizeLog(line) {
   var cls = '';
   if (/error|fail|refused|invalid|deny|denied/i.test(line)) cls = 'err';
@@ -341,91 +834,19 @@ function tgLogs() {
 }
 function startLogsPoll() { stopLogsPoll(); logsTimer = setInterval(loadLogs, 8000); }
 function stopLogsPoll() { if (logsTimer) { clearInterval(logsTimer); logsTimer = null; } }
+function runDiag() {
+  toast('Probando conexión…');
+  api('GET', '/diag').then(function (d) {
+    var ie = document.getElementById('diagInet');
+    var wf = document.getElementById('diagWifi');
+    ie.className = 'st ' + (d.internet ? 'ok' : 'bad');
+    wf.className = 'st ' + (d.wiimmfiReachable ? 'ok' : 'bad');
+    toast(d.internet ? (d.wiimmfiReachable ? 'Todo OK' : 'Internet OK · Wiimmfi no responde') : 'Sin internet', !d.internet);
+  }).catch(function () { toast('Error de diagnóstico', true); });
+}
+
+// ---------- poll + init ----------
 function poll() { api('GET', '/status').then(setState).catch(function () {}); }
-function toggle() {
-  api('GET', '/status').then(function (st) {
-    var wantOn = !st.active;
-    api('POST', '/toggle', { action: wantOn ? 'on' : 'off' }).then(function (r) {
-      if (r.ok) { toast(wantOn ? 'Red encendida' : 'Red apagada'); poll(); if (logsOpen) loadLogs(); }
-      else toast(r.error || 'Error', true);
-    });
-  });
-}
-function fillConfig(c) {
-  document.getElementById('f-ssid').value = c.ssid;
-  document.getElementById('f-sec').value = c.security;
-  document.getElementById('f-wep').value = c.wepKey || '';
-  document.getElementById('f-apip').value = c.apIp;
-  document.getElementById('f-prefix').value = String(c.prefix);
-  document.getElementById('f-dstart').value = c.dhcpStart;
-  document.getElementById('f-dend').value = c.dhcpEnd;
-  document.getElementById('f-lease').value = c.leaseTime;
-  document.getElementById('f-dns').value = c.dnsClients;
-  document.getElementById('f-autooff').value = c.autoOffMinutes || 0;
-  document.getElementById('f-pin').value = c.pin || '';
-
-  var cc = document.getElementById('f-cc'), hasCc = false;
-  for (var i = 0; i < cc.options.length; i++) if (cc.options[i].value === c.countryCode) hasCc = true;
-  if (!hasCc) { var o = document.createElement('option'); o.value = c.countryCode; o.textContent = c.countryCode; cc.appendChild(o); }
-  cc.value = c.countryCode;
-
-  var ch = document.getElementById('f-ch'); ch.innerHTML = '';
-  for (var k = 1; k <= 13; k++) { var op = document.createElement('option'); op.value = k; op.textContent = k; ch.appendChild(op); }
-  ch.value = String(c.channel);
-
-  document.getElementById('f-hidden').className = 'switch' + (c.hidden ? ' on' : '');
-  document.getElementById('f-macfilter').className = 'switch' + (c.macFilter ? ' on' : '');
-  document.getElementById('f-isolation').className = 'switch' + (c.isolation ? ' on' : '');
-  secChange();
-  renderMacs(c.macList || []);
-}
-function renderMacs(list) {
-  var box = document.getElementById('macList');
-  if (!list.length) { box.innerHTML = '<div class="empty">Sin MACs (agrega la de tu DS)</div>'; return; }
-  box.innerHTML = list.map(function (m) {
-    return '<div class="mac-item"><span class="mac">' + m + '</span><button class="del" onclick="delMac(\'' + m + '\')">✕</button></div>';
-  }).join('');
-}
-function addMac() {
-  var inp = document.getElementById('f-macadd'), mac = inp.value.trim().toLowerCase();
-  if (!mac) return;
-  api('POST', '/whitelist', { mac: mac }).then(function (r) {
-    if (r.ok) { inp.value = ''; renderMacs(r.macList); toast('MAC agregada'); }
-    else toast(r.error || 'MAC inválida', true);
-  });
-}
-function delMac(mac) {
-  api('DELETE', '/whitelist/' + mac).then(function (r) {
-    if (r.ok) { renderMacs(r.macList); toast('MAC quitada'); }
-  });
-}
-function saveCfg() {
-  var body = {
-    ssid: document.getElementById('f-ssid').value.trim(),
-    security: document.getElementById('f-sec').value,
-    wepKey: document.getElementById('f-wep').value.trim(),
-    channel: parseInt(document.getElementById('f-ch').value, 10),
-    countryCode: document.getElementById('f-cc').value,
-    hidden: document.getElementById('f-hidden').classList.contains('on'),
-    macFilter: document.getElementById('f-macfilter').classList.contains('on'),
-    apIp: document.getElementById('f-apip').value.trim(),
-    prefix: parseInt(document.getElementById('f-prefix').value, 10),
-    dhcpStart: document.getElementById('f-dstart').value.trim(),
-    dhcpEnd: document.getElementById('f-dend').value.trim(),
-    leaseTime: document.getElementById('f-lease').value.trim(),
-    dnsClients: document.getElementById('f-dns').value.trim(),
-    isolation: document.getElementById('f-isolation').classList.contains('on'),
-    autoOffMinutes: parseInt(document.getElementById('f-autooff').value, 10) || 0,
-    pin: document.getElementById('f-pin').value.trim()
-  };
-  api('POST', '/config', body).then(function (r) {
-    if (r.ok) {
-      if (body.pin !== PIN) { PIN = body.pin; localStorage.setItem('ds-wifi-pin', PIN); }
-      toast(r.restarted ? 'Guardado (red reiniciada)' : 'Guardado');
-      api('GET', '/config').then(fillConfig);
-    } else toast((r.errors || ['Error']).join(' · '), true);
-  });
-}
 function askPin() {
   document.getElementById('pinModal').classList.add('open');
   setTimeout(function () { document.getElementById('pinInput').focus(); }, 100);
@@ -442,10 +863,16 @@ function init() {
     fillConfig(c);
     if (c.pin && PIN !== c.pin) { askPin(); return; }
     poll();
+    loadStats();
+    if (c.stats && c.stats.alerts && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
   }).catch(function () {});
 }
+buildMacInput();
 window.addEventListener('load', function () { setTimeout(init, 300); });
 setInterval(function () { if (!document.getElementById('pinModal').classList.contains('open')) poll(); }, 5000);
+setInterval(function () { if (!document.getElementById('pinModal').classList.contains('open')) loadStats(); }, 10000);
 </script>
 </body>
 </html>

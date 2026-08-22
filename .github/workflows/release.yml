@@ -1,0 +1,61 @@
+name: release
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Leer versión
+        id: version
+        run: |
+          V=$(node -p "require('./package.json').version")
+          echo "v=$V" >> "$GITHUB_OUTPUT"
+          echo "version=$V"
+
+      - name: Verificar si el tag existe
+        id: tag
+        run: |
+          if git rev-parse "v${{ steps.version.outputs.v }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Crear tag
+        if: steps.tag.outputs.exists == 'false'
+        run: |
+          git tag "v${{ steps.version.outputs.v }}"
+          git push origin "v${{ steps.version.outputs.v }}"
+
+      - name: Extraer notas del CHANGELOG
+        if: steps.tag.outputs.exists == 'false'
+        id: notes
+        run: |
+          V="${{ steps.version.outputs.v }}"
+          node -e "
+            const fs=require('fs');
+            const c=fs.readFileSync('CHANGELOG.md','utf8');
+            const m=c.match(new RegExp('## \\\\['+V+'\\\\][\\\\s\\\\S]*?(?=## \\\\[)'));
+            fs.writeFileSync('RELEASE_NOTES.md', m ? m[0].trim() : ('Release '+V));
+          "
+
+      - name: Publicar GitHub Release
+        if: steps.tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.v }}
+          name: v${{ steps.version.outputs.v }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: true
