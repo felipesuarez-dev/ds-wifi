@@ -4,11 +4,13 @@
 
 # ds-wifi
 
-**Punto de acceso WiFi para Nintendo DS / DS Lite conectado a Wiimmfi.** Enciende y apaga una red compatible con la DS desde el celular, con filtro por MAC, aislamiento de red y logs en vivo.
+**Punto de acceso WiFi para Nintendo DS / DS Lite, con control total de la red desde el celular.** Conecta tu consola a los servidores comunitarios de [Wiimmfi](https://wiimmfi.de) o a otros servicios en línea — tú decides la configuración de la red.
 
 [![License][license-badge]](LICENSE)
 
 [Instalación](#instalación) · [Cómo funciona](#cómo-funciona) · [Conectar una DS](#conectar-una-nintendo-ds-lite) · [Configuración](#configuración)
+
+<img src="assets/screenshot.png" alt="Interfaz web de ds-wifi" width="100%" />
 
 </div>
 
@@ -16,16 +18,18 @@
 
 ## Problema
 
-La Nintendo DS / DS Lite solo soporta WiFi **802.11b** con seguridad **abierta o WEP** (no WPA/WPA2). Los chips WiFi modernos no emiten WEP en modo AP, y dejar la red del router principal abierta es un riesgo. Conectar la DS a [Wiimmfi](https://wiimmfi.de) (el reemplazo fan de Nintendo WFC) requiere una red dedicada y segura.
+La Nintendo DS / DS Lite solo soporta WiFi **802.11b** con seguridad **abierta o WEP** (no WPA/WPA2). Configurar un router para eso es tedioso y arriesgado: hay que bajar la seguridad, jugar con el firmware y, al terminar, revertir todo. Sin interfaz se puede, pero es incómodo y propenso a errores.
+
+`ds-wifi` resuelve eso con un punto de acceso dedicado y una **interfaz web** desde la que controlas la red: la enciendes cuando juegas, la apagas cuando terminas, y ajustas SSID, filtro MAC, DHCP y aislamiento sin tocar el router.
+
+> **Sobre Wiimmfi**: son **servidores comunitarios** (hechos por fans) que reemplazan a Nintendo WFC. Este proyecto **no está afiliado** a Wiimmfi; simplemente te ayuda a conectar tu DS a esos servidores (o a cualquier otro) a través de una red que controlas tú.
 
 ## Solución
-
-`ds-wifi` crea un punto de acceso dedicado en una máquina Linux con:
 
 - **Red abierta + filtro por MAC** — solo las consolas listadas pueden asociarse.
 - **Aislamiento guest** — los clientes salen a internet pero no alcanzan tu LAN.
 - **Apagada por defecto** — la red solo existe mientras la enciendes.
-- **Interfaz web** — encender/apagar, clientes conectados, logs y configuración completa desde el celular o PC.
+- **Interfaz web** — encender/apagar, clientes conectados, logs en vivo y configuración completa desde el celular o PC.
 
 ## Instalación
 
@@ -43,8 +47,19 @@ Abre **http://&lt;IP-del-servidor&gt;:3120**.
 
 ## Cómo funciona
 
-```
-DS Lite ──WiFi abierta──▶ hostapd ──▶ dnsmasq (DHCP) ──▶ NAT ──▶ LAN ──▶ internet ──▶ Wiimmfi
+```mermaid
+flowchart LR
+    DS["Nintendo DS / DS Lite"]
+    AP["hostapd<br/>AP abierto 2.4 GHz"]
+    DHCP["dnsmasq<br/>DHCP + DNS"]
+    NAT["NAT + aislamiento guest"]
+    INET["Internet"]
+    WFC["Wiimmfi<br/>servidores comunitarios"]
+    UI["Interfaz web<br/>:3120"]
+
+    DS -->|"WiFi abierta<br/>(802.11b/g)"| AP
+    AP --> DHCP --> NAT --> INET --> WFC
+    UI -. "enciende / apaga · configura" .-> AP
 ```
 
 La interfaz web corre como usuario `dswifi` con sudo acotado (solo puede arrancar/parar el AP y leer estado/logs). El AP, el NAT y el firewall corren como root dentro de `ds-wifi-ap.service`.
@@ -102,6 +117,16 @@ sudoers/dswifi      # permisos acotados para el usuario dswifi
 - La DS Lite se desconecta sola cuando no usa el modo online (suelta el lease DHCP); el contador de clientes refleja las consolas con lease activo.
 - El SSID es visible para cualquiera en rango, pero solo las MAC listadas pueden asociarse. Si quieres que ni aparezca, activa "Ocultar SSID" (es cosmético; el filtro MAC es la protección real).
 - La MAC se puede falsificar en teoría; el aislamiento guest hace que, incluso en ese caso, el cliente solo obtenga internet.
+
+## Autor
+
+<div align="center">
+
+<img src="assets/pumasoft.png" alt="PumaSoft" width="80" />
+
+**[PumaSoft](https://github.com/felipesuarez-dev)**
+
+</div>
 
 ## Licencia
 
