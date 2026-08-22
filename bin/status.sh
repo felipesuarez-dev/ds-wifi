@@ -34,7 +34,7 @@ def active():
 
 
 def leases():
-    """Lease DHCP -> {mac: {ip, host}}. Fuente principal de 'clientes conectados'."""
+    """Lease DHCP -> {mac: {ip, host}}. Solo para enriquecer (ip/host)."""
     out = {}
     if os.path.isfile(LEASES):
         for line in open(LEASES):
@@ -45,7 +45,7 @@ def leases():
 
 
 def stations():
-    """Station dump -> {mac: {signal, connected}}. Solo para enriquecer con señal."""
+    """Station dump -> {mac: {signal, connected}}. SOLO asociados ahora mismo."""
     res = {}
     try:
         raw = subprocess.run(["iw", "dev", WIFI_IF, "station", "dump"],
@@ -72,11 +72,11 @@ def main():
     lease_map = leases()
     sta_map = stations()
 
-    all_macs = sorted(set(list(lease_map.keys()) + list(sta_map.keys())))
+    # Conectado = asociado al AP AHORA. El lease persiste horas tras
+    # desconectarse, así que NO se usa como señal de conexión.
     clients = []
-    for mac in all_macs:
+    for mac, s in sta_map.items():
         l = lease_map.get(mac, {})
-        s = sta_map.get(mac, {})
         clients.append({
             "mac": mac,
             "ip": l.get("ip"),
@@ -84,6 +84,7 @@ def main():
             "signal": s.get("signal"),
             "connected": s.get("connected"),
         })
+    clients.sort(key=lambda c: c["mac"])
 
     print(json.dumps({
         "active": running,
