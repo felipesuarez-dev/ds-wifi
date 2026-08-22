@@ -10,3 +10,8 @@ logs/
 
 # config local de Engram
 .engram/
+config/stats.json
+config/lastseen.json
+scraper/node_modules/
+scraper/.cache/
+scraper/package-lock.json

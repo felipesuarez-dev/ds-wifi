@@ -1,0 +1,17 @@
+[Unit]
+Description=DS WiFi Wiimmfi stats scraper
+After=network.target
+
+[Service]
+Type=simple
+User=dswifi
+Group=dswifi
+WorkingDirectory=/opt/ds-wifi/scraper
+Environment=HOME=/opt/ds-wifi/scraper
+Environment=PUPPETEER_CACHE_DIR=/opt/ds-wifi/scraper/.cache
+ExecStart=@NODE@ /opt/ds-wifi/scraper/scraper.js
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
