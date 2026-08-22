@@ -28,10 +28,12 @@ Primera versión pública (Beta).
 ### Changed
 - `macList` ahora almacena objetos `{ mac, name }` (con migración automática del formato anterior).
 
-## [Unreleased]
+## [0.2.1] - 2026-08-22
+
+Parche: corrección en el conteo de clientes conectados.
 
 ### Fixed
-- **Clientes conectados**: solo se cuentan las consolas realmente asociadas al AP (`station dump`). El lease DHCP persiste horas tras apagar la consola y ya no aparece como conexión activa.
+- **Clientes conectados**: solo se cuentan las consolas realmente asociadas al AP (`station dump`). El lease DHCP persiste horas tras apagar la consola y aparecía como conexión activa.
 - Cada dispositivo de la whitelist muestra "visto hace X" cuando está desconectado.
 
 ## [0.2.0] - 2026-08-22
