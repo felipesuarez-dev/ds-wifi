@@ -202,18 +202,15 @@ footer .fsub{font-size:9.5px;color:var(--t3);font-family:'IBM Plex Mono',monospa
   <div class="card">
     <div class="card-title">Wiimmfi · Mis juegos</div>
     <div class="alert-banner" id="alertBanner"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z"/></svg><span id="alertTxt"></span></div>
-    <div class="games" id="games"><div class="empty">Sin juegos configurados</div></div>
+    <div class="games" id="games"><div class="empty">Sin juegos (agrega tus favoritos)</div></div>
+    <div style="height:10px"></div>
+    <button class="btn ghost" style="height:38px;font-size:12px" onclick="openGames()">+ Agregar juego</button>
     <div style="height:10px"></div>
     <div class="switch-row" style="padding:10px 14px">
       <div><div class="lbl">Alertas</div><div class="sub">Avisa al superar el umbral</div></div>
       <button class="switch" id="f-alerts" onclick="sw(this)"></button>
     </div>
     <div class="field" style="margin-top:10px"><label>Intervalo de consulta (min)</label><input id="f-interval" type="number" min="1" placeholder="3"></div>
-    <div style="height:12px"></div>
-    <div class="field"><label>User-Agent (Cloudflare, opcional)</label><input id="f-ua" placeholder="pega el User-Agent de tu navegador"></div>
-    <div class="field" style="margin-top:8px"><label>Cookie cf_clearance (opcional)</label><input id="f-cf" placeholder="pega el valor de la cookie cf_clearance"></div>
-    <div style="height:10px"></div>
-    <div class="hint">Si los juegos muestran "no disponible" (Cloudflare), pega tu <b>User-Agent</b> y la cookie <b>cf_clearance</b> (F12 → Application → Cookies → wiimmfi.de) y guarda. Ver README.</div>
   </div>
 
   <div class="tog" id="togCfg" onclick="tg('secCfg','togCfg')">
@@ -367,15 +364,11 @@ footer .fsub{font-size:9.5px;color:var(--t3);font-family:'IBM Plex Mono',monospa
 </div>
 
 <div class="modal" id="gameModal">
-  <div class="modal-box">
-    <h3>Agregar juego</h3><p>Sigue los jugadores online en Wiimmfi.</p>
-    <input id="gameName" placeholder="Nombre (ej: Mario Kart DS)">
-    <div style="height:8px"></div>
-    <input id="gameUrl" placeholder="URL de stats (wiimmfi.de)">
-    <div style="height:8px"></div>
-    <input id="gameThreshold" type="number" min="0" placeholder="Umbral de alerta (ej: 3)">
-    <div style="height:14px"></div>
-    <button class="btn" onclick="saveGame()">Guardar</button>
+  <div class="modal-box" style="width:min(380px,92vw)">
+    <h3>Buscar juego</h3><p>Toca un juego para seguirlo en Wiimmfi.</p>
+    <input id="gameSearch" placeholder="Buscar (ej: Mario Kart)">
+    <div style="height:10px"></div>
+    <div class="games" id="gameList" style="max-height:340px;overflow-y:auto"></div>
   </div>
 </div>
 
@@ -682,8 +675,6 @@ function fillConfig(c) {
   document.getElementById('f-pin').value = c.pin || '';
   document.getElementById('f-alerts').className = 'switch' + (c.stats && c.stats.alerts ? ' on' : '');
   document.getElementById('f-interval').value = (c.stats && c.stats.intervalMinutes) || 3;
-  document.getElementById('f-ua').value = (c.stats && c.stats.userAgent) || '';
-  document.getElementById('f-cf').value = (c.stats && c.stats.cfClearance) || '';
 
   var cc = document.getElementById('f-cc'), hasCc = false;
   for (var i = 0; i < cc.options.length; i++) if (cc.options[i].value === c.countryCode) hasCc = true;
@@ -720,9 +711,7 @@ function saveCfg() {
     pin: document.getElementById('f-pin').value.trim(),
     stats: Object.assign({}, (cfg.stats || {}), {
       alerts: document.getElementById('f-alerts').classList.contains('on'),
-      intervalMinutes: parseInt(document.getElementById('f-interval').value, 10) || 3,
-      userAgent: document.getElementById('f-ua').value.trim(),
-      cfClearance: document.getElementById('f-cf').value.trim()
+      intervalMinutes: parseInt(document.getElementById('f-interval').value, 10) || 3
     })
   };
   api('POST', '/config', body).then(function (r) {
@@ -737,34 +726,27 @@ function saveCfg() {
 // ---------- Wiimmfi stats + alerts ----------
 function loadStats() {
   api('GET', '/stats').then(function (st) {
-    renderGames(st);
+    renderFavorites(st);
     checkAlerts(st);
   }).catch(function () {});
 }
-function renderGames(st) {
+function renderFavorites(st) {
   var box = document.getElementById('games');
-  if (!st.games || !st.games.length) {
-    box.innerHTML = '<div class="empty">Sin juegos. Agrégalos con el botón +</div>';
-  } else {
-    box.innerHTML = st.games.map(function (g) {
-      var cnt = g.onlineCount === null ? '<span class="null">—</span>' : g.onlineCount;
-      var th = g.threshold > 0 ? (' · umbral ' + g.threshold) : '';
-      var upd = st.updatedAt ? timeAgo(st.updatedAt) : 'sin datos';
-      var over = g.overThreshold ? '<span class="badge warn">ALERTA</span>' : '';
-      return '<div class="game">' +
-        '<div class="cnt' + (g.onlineCount === null ? ' null' : '') + '">' + cnt + '</div>' +
-        '<div class="ginfo"><div class="gnm">' + esc(g.name) + over + '</div>' +
-        '<div class="gst">' + (g.reachable ? 'online' : 'no disponible') + th + ' · ' + upd + '</div></div>' +
-        '<a href="' + esc(g.url) + '" target="_blank">Stats ↗</a>' +
-        '<button class="del" title="Quitar" onclick="delGame(\'' + g.id + '\')">✕</button>' +
-        '</div>';
-    }).join('');
+  if (!st.favorites || !st.favorites.length) {
+    box.innerHTML = '<div class="empty">Sin juegos. Toca "+ Agregar juego"</div>';
+    return;
   }
-  // botón agregar
-  var addBtn = document.createElement('div');
-  addBtn.style.marginTop = '4px';
-  addBtn.innerHTML = '<button class="btn ghost" style="height:38px;font-size:12px" onclick="openGame()">+ Agregar juego</button>';
-  box.appendChild(addBtn);
+  box.innerHTML = st.favorites.map(function (g) {
+    var cnt = g.onlineCount === null ? '<span class="null">—</span>' : g.onlineCount;
+    var over = g.overThreshold ? '<span class="badge warn">ALERTA</span>' : '';
+    return '<div class="game">' +
+      '<div class="cnt' + (g.onlineCount === null ? ' null' : '') + '">' + cnt + '</div>' +
+      '<div class="ginfo"><div class="gnm">' + esc(g.name) + ' ' + over + '</div>' +
+      '<div class="gst">umbral ' + g.threshold + ' · toca para cambiar</div></div>' +
+      '<button class="pin pinned" title="Umbral" onclick="cycleThreshold(\'' + g.id + '\')">🎯</button>' +
+      '<button class="del" title="Quitar" onclick="delGame(\'' + g.id + '\')">✕</button>' +
+      '</div>';
+  }).join('');
 }
 function checkAlerts(st) {
   if (!st.alertsEnabled) {
@@ -774,7 +756,7 @@ function checkAlerts(st) {
   }
   var now = {};
   var msgs = [];
-  st.games.forEach(function (g) {
+  (st.favorites || []).forEach(function (g) {
     if (g.overThreshold) {
       now[g.id] = true;
       msgs.push(g.name + ': ' + g.onlineCount + ' online (umbral ' + g.threshold + ')');
@@ -792,24 +774,47 @@ function checkAlerts(st) {
   if (msgs.length) { txt.textContent = '¡Jugadores online! ' + msgs.join(' · '); banner.classList.add('show'); }
   else banner.classList.remove('show');
 }
-function openGame() {
-  document.getElementById('gameName').value = '';
-  document.getElementById('gameUrl').value = '';
-  document.getElementById('gameThreshold').value = '';
+function openGames() {
   document.getElementById('gameModal').classList.add('open');
+  document.getElementById('gameSearch').value = '';
+  searchGames('');
+  setTimeout(function () { document.getElementById('gameSearch').focus(); }, 100);
 }
-function saveGame() {
-  var name = document.getElementById('gameName').value.trim();
-  var url = document.getElementById('gameUrl').value.trim();
-  var threshold = parseInt(document.getElementById('gameThreshold').value, 10) || 0;
-  if (!name || !url) { toast('Faltan datos', true); return; }
-  document.getElementById('gameModal').classList.remove('open');
+function searchGames(q) {
+  api('GET', '/games?q=' + encodeURIComponent(q || '')).then(function (r) {
+    var box = document.getElementById('gameList');
+    if (!r.games || !r.games.length) { box.innerHTML = '<div class="empty">Sin resultados</div>'; return; }
+    box.innerHTML = r.games.map(function (g) {
+      var added = (cfg.stats.games || []).some(function (f) { return f.id === g.id; });
+      return '<div class="game">' +
+        '<div class="cnt">' + g.online + '</div>' +
+        '<div class="ginfo"><div class="gnm">' + esc(g.name) + '</div>' +
+        '<div class="gst">' + esc(g.status.split('.')[0]) + '</div></div>' +
+        (added ? '<span class="badge on">✓</span>' :
+          '<button class="pin" title="Seguir" onclick="addFavorite(\'' + g.id + '\',\'' + esc(g.name.replace(/\'/g,'')) + '\')">+</button>') +
+        '</div>';
+    }).join('');
+  }).catch(function () {});
+}
+function addFavorite(id, name) {
   var games = (cfg.stats.games || []).slice();
-  var id = 'g' + Date.now();
-  games.push({ id: id, name: name, url: url, threshold: threshold });
+  if (games.some(function (f) { return f.id === id; })) return;
+  games.push({ id: id, name: name, threshold: 3 });
   api('POST', '/config', { stats: Object.assign({}, cfg.stats, { games: games }) }).then(function (r) {
-    if (r.ok) { toast('Juego agregado'); api('GET', '/config').then(fillConfig); loadStats(); }
-    else toast((r.errors || ['Error']).join(' · '), true);
+    if (r.ok) { toast('Juego agregado'); api('GET', '/config').then(fillConfig); loadStats(); searchGames(document.getElementById('gameSearch').value); }
+  });
+}
+function cycleThreshold(id) {
+  var seq = [1, 3, 5, 10, 20];
+  var games = (cfg.stats.games || []).map(function (g) {
+    if (g.id === id) {
+      var i = seq.indexOf(g.threshold);
+      g.threshold = seq[(i + 1) % seq.length];
+    }
+    return g;
+  });
+  api('POST', '/config', { stats: Object.assign({}, cfg.stats, { games: games }) }).then(function (r) {
+    if (r.ok) { api('GET', '/config').then(fillConfig); loadStats(); }
   });
 }
 function delGame(id) {
@@ -877,6 +882,7 @@ function init() {
   }).catch(function () {});
 }
 buildMacInput();
+document.getElementById('gameSearch').addEventListener('input', function (e) { searchGames(e.target.value); });
 window.addEventListener('load', function () { setTimeout(init, 300); });
 setInterval(function () { if (!document.getElementById('pinModal').classList.contains('open')) poll(); }, 5000);
 setInterval(function () { if (!document.getElementById('pinModal').classList.contains('open')) loadStats(); }, 10000);

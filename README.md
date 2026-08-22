@@ -46,19 +46,11 @@ El contador de jugadores online usa un worker que lee `wiimmfi.de`:
 sudo ./scraper/install.sh
 ```
 
-`wiimmfi.de` está detrás de **Cloudflare**, que bloquea el acceso automatizado. Por eso el worker tiene dos caminos:
+El worker usa **nodriver + Google Chrome real** (headful bajo Xvfb), que es lo que pasa el reto de Cloudflare de `wiimmfi.de`. Cada pocos minutos descarga **el listado completo de juegos** (ID, nombre, estado y jugadores online) de una sola URL (`/stat?m=c`) y lo expone en la interfaz.
 
-1. **Cookie `cf_clearance` (fiable, recomendado)** — pegas en la interfaz (sección "Wiimmfi · Mis juegos") tu **User-Agent** y la cookie **`cf_clearance`** de tu navegador, y el worker hace un fetch simple. Mientras la cookie esté vigente (≈ 30–60 min), funciona sin depender de nada más.
-2. **Navegador headful + Xvfb (automático)** — si no hay cookie, usa Chrome con display + stealth + perfil persistente (la misma técnica de los dashboards comunitarios de MKDS). Pasa Cloudflare **solo en redes donde el reto auto-resuelve**; si tu IP/navegador queda bloqueado, muestra "no disponible".
+**No hay que pegar URLs ni cookies**: en "Wiimmfi · Mis juegos" buscas el juego que te interesa, lo agregas a tus favoritos y eliges el umbral de alerta. Todo dinámico.
 
-#### Cómo obtener la cookie `cf_clearance`
-
-1. Abre `https://wiimmfi.de/stats/game/mariokartds` en **tu navegador normal** (resuelve el reto de Cloudflare).
-2. Abre las herramientas de desarrollo (**F12**) → pestaña **Application/Storage** → **Cookies** → `wiimmfi.de` → copia el valor de **`cf_clearance`**.
-3. Copia también tu **User-Agent** (en F12 → Network → cualquier request → header `User-Agent`, o búscalo en un sitio tipo "what is my user agent").
-4. Pégalos en la interfaz (Wiimmfi · Mis juegos → User-Agent y cf_clearance) y guarda.
-
-> La cookie expira a los ~30–60 min; cuando vuelva a mostrar "no disponible", repites el paso.
+> Requiere Google Chrome instalado (el instalador lo baja automáticamente) y usa ~300 MB de RAM por el navegador.
 
 ## Cómo funciona
 
@@ -102,7 +94,7 @@ La interfaz web corre como usuario `dswifi` con sudo acotado (solo puede arranca
 | **Dispositivos** | Whitelist por MAC con ingreso segmentado (6 cajas), nombre personalizado, copiar MAC, exportar/importar JSON y detección de fabricante (OUI) |
 | **Estado en vivo** | Punto verde en los dispositivos conectados + aviso "se conectó" |
 | **Clientes** | Lista de conectados con IP, señal (dBm) y nombre amigable |
-| **Wiimmfi · Mis juegos** | Jugadores online por juego, juegos agregables y **alertas en vivo** con umbral configurable (notificación del navegador) |
+| **Wiimmfi · Mis juegos** | Listado dinámico de juegos con jugadores online, buscador, favoritos y **alertas en vivo** con umbral configurable (notificación del navegador) |
 | **Ayuda** | Guía de conexión integrada + diagnóstico de red (internet / Wiimmfi) |
 | **Red** | SSID, seguridad (abierta/WEP), canal, país, ocultar SSID, filtro MAC |
 | **DHCP** | IP del AP, subred, rango DHCP, lease time, DNS |
@@ -119,7 +111,7 @@ Todo se configura desde la interfaz web:
 | Acceso (dispositivos) | filtro MAC on/off, lista con nombres, exportar/importar |
 | Red/DHCP | IP del AP, subred, rango DHCP, lease time, DNS |
 | Seguridad & auto | aislamiento guest, auto-apagado, PIN |
-| Wiimmfi · Mis juegos | lista de juegos, umbral de alerta, intervalo |
+| Wiimmfi · Mis juegos | buscador de juegos, favoritos, umbral de alerta, intervalo |
 
 ## API
 
@@ -131,7 +123,8 @@ Todo se configura desde la interfaz web:
 | POST | `/api/config` | guarda y aplica |
 | POST/DELETE/PUT | `/api/whitelist` | agrega / quita / renombra MAC |
 | GET/POST | `/api/whitelist/export·import` | respaldo y restauración |
-| GET | `/api/stats` | jugadores online por juego (Wiimmfi) |
+| GET | `/api/stats` | favoritos con jugadores online + estado de alerta |
+| GET | `/api/games` | listado de juegos (con `?q=` para buscar) |
 | GET | `/api/diag` | diagnóstico de internet / Wiimmfi |
 | GET | `/api/logs` | últimas líneas del log |
 
@@ -141,7 +134,7 @@ Todo se configura desde la interfaz web:
 bin/ap-control.sh      # start/stop del AP (hostapd + dnsmasq + NAT + aislamiento)
 bin/status.sh          # snapshot JSON de clientes
 bin/log.sh             # lector de logs
-scraper/scraper.js     # worker opcional (Puppeteer) para stats de Wiimmfi
+scraper/scraper.py     # worker opcional (nodriver + Chrome real) para stats de Wiimmfi
 web/server.js          # API + generación de configs (Node, sin dependencias)
 web/public/            # interfaz web (HTML/CSS/JS vanilla)
 config/ap.json         # config editable (no se versiona)
