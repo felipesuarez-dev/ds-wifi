@@ -5,8 +5,9 @@
   "description": "Worker que scrapea estadísticas de Wiimmfi (jugadores online por juego)",
   "main": "scraper.js",
   "dependencies": {
-    "puppeteer": "^22.0.0",
+    "puppeteer": "^24.32.0",
     "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2"
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "puppeteer-extra-plugin-user-data-dir": "^2.4.1"
   }
 }

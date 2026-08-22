@@ -209,8 +209,11 @@ footer .fsub{font-size:9.5px;color:var(--t3);font-family:'IBM Plex Mono',monospa
       <button class="switch" id="f-alerts" onclick="sw(this)"></button>
     </div>
     <div class="field" style="margin-top:10px"><label>Intervalo de consulta (min)</label><input id="f-interval" type="number" min="1" placeholder="3"></div>
+    <div style="height:12px"></div>
+    <div class="field"><label>User-Agent (Cloudflare, opcional)</label><input id="f-ua" placeholder="pega el User-Agent de tu navegador"></div>
+    <div class="field" style="margin-top:8px"><label>Cookie cf_clearance (opcional)</label><input id="f-cf" placeholder="pega el valor de la cookie cf_clearance"></div>
     <div style="height:10px"></div>
-    <div class="hint">Agrega juegos para ver cuánta gente hay online en Wiimmfi.</div>
+    <div class="hint">Si los juegos muestran "no disponible" (Cloudflare), pega tu <b>User-Agent</b> y la cookie <b>cf_clearance</b> (F12 → Application → Cookies → wiimmfi.de) y guarda. Ver README.</div>
   </div>
 
   <div class="tog" id="togCfg" onclick="tg('secCfg','togCfg')">
@@ -679,6 +682,8 @@ function fillConfig(c) {
   document.getElementById('f-pin').value = c.pin || '';
   document.getElementById('f-alerts').className = 'switch' + (c.stats && c.stats.alerts ? ' on' : '');
   document.getElementById('f-interval').value = (c.stats && c.stats.intervalMinutes) || 3;
+  document.getElementById('f-ua').value = (c.stats && c.stats.userAgent) || '';
+  document.getElementById('f-cf').value = (c.stats && c.stats.cfClearance) || '';
 
   var cc = document.getElementById('f-cc'), hasCc = false;
   for (var i = 0; i < cc.options.length; i++) if (cc.options[i].value === c.countryCode) hasCc = true;
@@ -715,7 +720,9 @@ function saveCfg() {
     pin: document.getElementById('f-pin').value.trim(),
     stats: Object.assign({}, (cfg.stats || {}), {
       alerts: document.getElementById('f-alerts').classList.contains('on'),
-      intervalMinutes: parseInt(document.getElementById('f-interval').value, 10) || 3
+      intervalMinutes: parseInt(document.getElementById('f-interval').value, 10) || 3,
+      userAgent: document.getElementById('f-ua').value.trim(),
+      cfClearance: document.getElementById('f-cf').value.trim()
     })
   };
   api('POST', '/config', body).then(function (r) {

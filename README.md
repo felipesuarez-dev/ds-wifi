@@ -40,13 +40,25 @@ Abre **http://&lt;IP-del-servidor&gt;:3120**.
 
 ### Scraper de Wiimmfi (opcional)
 
-El seguimiento de jugadores online usa un worker con navegador headless:
+El contador de jugadores online usa un worker que lee `wiimmfi.de`:
 
 ```bash
 sudo ./scraper/install.sh
 ```
 
-> ⚠️ `wiimmfi.de` está detrás de Cloudflare, que bloquea el acceso automatizado. El worker está listo y degrada con elegancia ("no disponible"), pero es posible que necesites una configuración propia (Chrome real / perfil persistente) para que pase el reto. Ver `docs/RELEASING.md`.
+`wiimmfi.de` está detrás de **Cloudflare**, que bloquea el acceso automatizado. Por eso el worker tiene dos caminos:
+
+1. **Cookie `cf_clearance` (fiable, recomendado)** — pegas en la interfaz (sección "Wiimmfi · Mis juegos") tu **User-Agent** y la cookie **`cf_clearance`** de tu navegador, y el worker hace un fetch simple. Mientras la cookie esté vigente (≈ 30–60 min), funciona sin depender de nada más.
+2. **Navegador headful + Xvfb (automático)** — si no hay cookie, usa Chrome con display + stealth + perfil persistente (la misma técnica de los dashboards comunitarios de MKDS). Pasa Cloudflare **solo en redes donde el reto auto-resuelve**; si tu IP/navegador queda bloqueado, muestra "no disponible".
+
+#### Cómo obtener la cookie `cf_clearance`
+
+1. Abre `https://wiimmfi.de/stats/game/mariokartds` en **tu navegador normal** (resuelve el reto de Cloudflare).
+2. Abre las herramientas de desarrollo (**F12**) → pestaña **Application/Storage** → **Cookies** → `wiimmfi.de` → copia el valor de **`cf_clearance`**.
+3. Copia también tu **User-Agent** (en F12 → Network → cualquier request → header `User-Agent`, o búscalo en un sitio tipo "what is my user agent").
+4. Pégalos en la interfaz (Wiimmfi · Mis juegos → User-Agent y cf_clearance) y guarda.
+
+> La cookie expira a los ~30–60 min; cuando vuelva a mostrar "no disponible", repites el paso.
 
 ## Cómo funciona
 

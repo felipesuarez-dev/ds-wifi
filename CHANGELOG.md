@@ -30,4 +30,8 @@ Primera versión pública (Beta).
 
 ## [Unreleased]
 
-- Contador de "jugadores online" en vivo depende de superar Cloudflare en `wiimmfi.de` (ver `docs/RELEASING.md`).
+### Fixed
+- Scraper de Wiimmfi: agregado camino con cookie `cf_clearance` + User-Agent (fetch simple, fiable) además del navegador headful. El headful ahora usa Chrome 24.x + perfil persistente + Xvfb y el servicio detiene limpiamente (KillMode=mixed).
+
+### Known
+- `wiimmfi.de` está detrás de Cloudflare; el navegador headful solo pasa el reto en redes donde auto-resuelve. La cookie `cf_clearance` es el camino fiable (caduca ~30–60 min).
