@@ -141,7 +141,9 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 14px 24px;b
 .toast.err{background:var(--red);color:#fff}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px)}
 .modal.open{display:flex}
-.modal-box{background:var(--card);border:1px solid var(--card-b);border-radius:18px;padding:24px;width:min(330px,90vw)}
+.modal-box{background:var(--card);border:1px solid var(--card-b);border-radius:18px;padding:24px;width:min(330px,90vw);position:relative}
+.modal-x{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;border:none;background:var(--card-b);color:var(--t2);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.modal-x:hover{color:var(--red);background:var(--red-g)}
 .modal-box h3{font-size:16px;margin-bottom:6px}
 .modal-box p{font-size:12px;color:var(--t2);margin-bottom:16px}
 .modal-box input{width:100%;background:var(--card-b);border:1px solid var(--t3);border-radius:11px;color:var(--t);font-family:'IBM Plex Mono',monospace;font-size:16px;padding:13px;outline:none;text-align:center;letter-spacing:5px}
@@ -347,6 +349,7 @@ footer .fsub{font-size:9.5px;color:var(--t3);font-family:'IBM Plex Mono',monospa
 
 <div class="modal" id="pinModal">
   <div class="modal-box">
+    <button class="modal-x" onclick="closeModal('pinModal')">✕</button>
     <h3>PIN de acceso</h3><p>Esta interfaz está protegida.</p>
     <input id="pinInput" type="password" placeholder="••••">
     <div style="height:14px"></div>
@@ -356,6 +359,7 @@ footer .fsub{font-size:9.5px;color:var(--t3);font-family:'IBM Plex Mono',monospa
 
 <div class="modal" id="nameModal">
   <div class="modal-box">
+    <button class="modal-x" onclick="closeModal('nameModal')">✕</button>
     <h3>Renombrar dispositivo</h3><p id="nameMac" style="font-family:'IBM Plex Mono',monospace"></p>
     <input id="nameInput" placeholder="Nombre">
     <div style="height:14px"></div>
@@ -363,8 +367,9 @@ footer .fsub{font-size:9.5px;color:var(--t3);font-family:'IBM Plex Mono',monospa
   </div>
 </div>
 
-<div class="modal" id="gameModal">
+<div class="modal" id="gameModal" onclick="if(event.target===this) closeModal('gameModal')">
   <div class="modal-box" style="width:min(380px,92vw)">
+    <button class="modal-x" onclick="closeModal('gameModal')">✕</button>
     <h3>Buscar juego</h3><p>Toca un juego para seguirlo en Wiimmfi.</p>
     <input id="gameSearch" placeholder="Buscar (ej: Mario Kart)">
     <div style="height:10px"></div>
@@ -409,6 +414,20 @@ function toast(msg, isErr) {
   timer = setTimeout(function () { el.className = 'toast'; }, 2600);
 }
 function sw(el) { el.classList.toggle('on'); }
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  if (id === 'gameModal') { logsOpen = logsOpen; stopGameSearch(); }
+}
+function stopGameSearch() {
+  var t = document.getElementById('gameSearch');
+  if (t) t.value = '';
+}
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape') return;
+  ['pinModal', 'nameModal', 'gameModal'].forEach(function (id) {
+    document.getElementById(id).classList.remove('open');
+  });
+});
 function secChange() {
   document.getElementById('f-wepWrap').style.display =
     document.getElementById('f-sec').value === 'wep' ? 'flex' : 'none';
