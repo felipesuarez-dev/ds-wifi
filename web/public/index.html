@@ -148,6 +148,24 @@ body{display:flex;flex-direction:column;align-items:center;padding:0 14px 24px;b
 .modal-box p{font-size:12px;color:var(--t2);margin-bottom:16px}
 .modal-box input{width:100%;background:var(--card-b);border:1px solid var(--t3);border-radius:11px;color:var(--t);font-family:'IBM Plex Mono',monospace;font-size:16px;padding:13px;outline:none;text-align:center;letter-spacing:5px}
 .modal-box input:focus{border-color:var(--mint)}
+.alert-sel{background:var(--card-b);border:1px solid var(--t3);border-radius:20px;color:var(--amber);font-family:'IBM Plex Mono',monospace;font-size:10px;padding:5px 4px;outline:none;appearance:none;text-align:center;flex-shrink:0;cursor:pointer}
+.alert-sel:hover,.alert-sel:focus{border-color:var(--amber)}
+.mini-btn{background:none;border:none;color:var(--t2);cursor:pointer;font-size:10px;font-weight:600;letter-spacing:.5px;display:flex;align-items:center;gap:5px;padding:2px 6px;border-radius:8px}
+.mini-btn:hover{color:var(--mint)}
+.badge.ds{background:rgba(96,165,250,.16);color:var(--blue)}
+.badge.wii{background:rgba(167,139,250,.2);color:#a78bfa}
+.badge.ww{background:var(--card-c);color:var(--t2)}
+.badge.dsi{background:rgba(45,212,191,.15);color:#2dd4bf}
+.badge.mix{background:rgba(226,232,240,.14);color:#cbd5e1}
+.badge.st-ok{background:var(--mint-g);color:var(--mint)}
+.badge.st-test{background:var(--blue-g);color:var(--blue)}
+.badge.st-partial{background:var(--amber-g);color:var(--amber)}
+.gdetail{display:none;background:var(--bg);border:1px solid var(--card-b);border-radius:10px;padding:9px 12px;font-size:10.5px;line-height:1.55;color:var(--t2);margin-top:8px}
+.gdetail.open{display:block}
+.gdetail b{color:var(--t)}
+.timers .btn.active{background:linear-gradient(140deg,var(--mint),var(--mint-2));color:var(--bg);font-weight:700;box-shadow:0 3px 14px var(--mint-g)}
+.spin{display:inline-block;width:11px;height:11px;border:2px solid var(--t3);border-top-color:var(--mint);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:5px}
+@keyframes sp{to{transform:rotate(360deg)}}
 footer{width:100%;max-width:500px;margin-top:26px;padding:16px 0 4px;text-align:center;border-top:1px solid var(--card-b);display:flex;flex-direction:column;align-items:center;gap:6px}
 footer .fline{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t3);font-weight:600}
 footer img{width:15px;height:15px;border-radius:4px}
@@ -178,9 +196,9 @@ footer .fsub{font-size:9.5px;color:var(--t3);font-family:'IBM Plex Mono',monospa
     <div class="power-label" id="pwLabel">Apagada</div>
     <div class="power-sub" id="pwSub">—</div>
     <div class="timers">
-      <button class="btn ghost" onclick="turnOnFor(60)">1h</button>
-      <button class="btn ghost" onclick="turnOnFor(120)">2h</button>
-      <button class="btn ghost" onclick="turnOnFor(0)">Indefinido</button>
+      <button class="btn ghost" id="t60" onclick="turnOnFor(60)">1h</button>
+      <button class="btn ghost" id="t120" onclick="turnOnFor(120)">2h</button>
+      <button class="btn ghost" id="tinf" onclick="turnOnFor(0)">Indefinido</button>
     </div>
   </div>
 
@@ -202,7 +220,9 @@ footer .fsub{font-size:9.5px;color:var(--t3);font-family:'IBM Plex Mono',monospa
   </div>
 
   <div class="card">
-    <div class="card-title">Wiimmfi · Mis juegos</div>
+    <div class="card-title">Wiimmfi · Mis juegos<button class="mini-btn" id="btnRefreshFav" onclick="refreshStats()" style="margin-left:auto">⟳ Actualizar</button></div>
+    <div class="hint" style="margin:-6px 0 12px">El número grande es la <b>gente conectada ahora mismo</b>.</div>
+    <div class="hint" id="staleHint" style="display:none;margin:-6px 0 12px;color:var(--amber)"></div>
     <div class="alert-banner" id="alertBanner"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z"/></svg><span id="alertTxt"></span></div>
     <div class="games" id="games"><div class="empty">Sin juegos (agrega tus favoritos)</div></div>
     <div style="height:10px"></div>
@@ -372,6 +392,8 @@ footer .fsub{font-size:9.5px;color:var(--t3);font-family:'IBM Plex Mono',monospa
     <button class="modal-x" onclick="closeModal('gameModal')">✕</button>
     <h3>Buscar juego</h3><p>Toca un juego para seguirlo en Wiimmfi.</p>
     <input id="gameSearch" placeholder="Buscar (ej: Mario Kart)">
+    <div style="height:8px"></div>
+    <button class="btn ghost" style="height:30px;font-size:11px" onclick="refreshStats(function(){searchGames(document.getElementById('gameSearch').value)})">⟳ Actualizar datos</button>
     <div style="height:10px"></div>
     <div class="games" id="gameList" style="max-height:340px;overflow-y:auto"></div>
   </div>
@@ -526,7 +548,15 @@ function resetMacInput() {
 }
 
 // ---------- status ----------
+function paintTimer(m) {
+  var map = { t60: 60, t120: 120, tinf: 0 };
+  Object.keys(map).forEach(function (id) {
+    var on = Number(m || 0) === map[id];
+    document.getElementById(id).className = 'btn ghost' + (on ? ' active' : '');
+  });
+}
 function setState(st) {
+  paintTimer(st.config.autoOffMinutes);
   var dot = document.getElementById('dot'), hst = document.getElementById('hst');
   var pw = document.getElementById('pw'), label = document.getElementById('pwLabel');
   var sub = document.getElementById('pwSub'), card = document.getElementById('pwCard');
@@ -678,7 +708,7 @@ function turnOnFor(min) {
   api('POST', '/config', { autoOffMinutes: min }).then(function (r) {
     if (!r.ok) { toast((r.errors || ['Error']).join(' · '), true); return; }
     api('POST', '/toggle', { action: 'on' }).then(function (t) {
-      if (t.ok) { toast(min === 0 ? 'Encendida (sin apagado)' : 'Encendida por ' + min + ' min'); poll(); }
+      if (t.ok) { toast(min === 0 ? 'Encendida (sin apagado)' : 'Encendida por ' + min + ' min'); paintTimer(min); poll(); }
       else toast(t.error || 'Error', true);
     });
   });
@@ -751,7 +781,31 @@ function loadStats() {
   api('GET', '/stats').then(function (st) {
     renderFavorites(st);
     checkAlerts(st);
+    paintStale(st);
   }).catch(function () {});
+}
+function paintStale(st) {
+  var el = document.getElementById('staleHint');
+  if (!el) return;
+  var mins = st.updatedAt ? Math.floor((Date.now() - st.updatedAt) / 60000) : null;
+  if (st.error === 'cloudflare') { el.style.display = 'block'; el.textContent = '⚠️ Cloudflare bloqueó la consulta — reintentando automáticamente.'; }
+  else if (mins !== null && mins >= 15) { el.style.display = 'block'; el.textContent = '⏱️ Datos de hace ' + (mins >= 60 ? Math.floor(mins / 60) + ' h' : mins + ' min') + ' — tocá ⟳ Actualizar.'; }
+  else el.style.display = 'none';
+}
+function consoleBadges(arr) {
+  return (arr || []).map(function (c) { return '<span class="badge ' + c.toLowerCase() + '" style="margin-left:4px">' + c + '</span>'; }).join('');
+}
+function statusBadge(s) {
+  s = s || '';
+  var l = s.toLowerCase(), cls = 'st-partial', lbl = 'PARCIAL';
+  if (l.indexOf('full support') === 0) { cls = 'st-ok'; lbl = 'OK'; }
+  else if (l.indexOf('testing') === 0) { cls = 'st-test'; lbl = 'PRUEBAS'; }
+  return '<span class="badge ' + cls + '" title="' + esc(s) + '">' + lbl + '</span>';
+}
+function thOpts(sel) {
+  return [1, 3, 5, 10, 20].map(function (v) {
+    return '<option value="' + v + '"' + (v === sel ? ' selected' : '') + '>🔔 ' + v + '+</option>';
+  }).join('');
 }
 function renderFavorites(st) {
   var box = document.getElementById('games');
@@ -761,47 +815,77 @@ function renderFavorites(st) {
   }
   box.innerHTML = st.favorites.map(function (g) {
     var cnt = g.onlineCount === null ? '<span class="null">—</span>' : g.onlineCount;
-    var over = g.overThreshold ? '<span class="badge warn">ALERTA</span>' : '';
+    var over = g.overThreshold ? '<span class="badge warn" title="Superaste tu alerta de ' + g.threshold + ' jugadores online">ALERTA</span>' : '';
     return '<div class="game">' +
-      '<div class="cnt' + (g.onlineCount === null ? ' null' : '') + '">' + cnt + '</div>' +
+      '<div class="cnt' + (g.onlineCount === null ? ' null' : '') + '" title="Jugadores online ahora">' + cnt + '</div>' +
       '<div class="ginfo"><div class="gnm">' + esc(g.name) + ' ' + over + '</div>' +
-      '<div class="gst">umbral ' + g.threshold + ' · toca para cambiar</div></div>' +
-      '<button class="pin pinned" title="Umbral" onclick="cycleThreshold(\'' + g.id + '\')">🎯</button>' +
+      '<div class="gst">🔔 avisa con ' + g.threshold + '+ online · cambialo acá al lado →</div></div>' +
+      '<select class="alert-sel" onchange="setThreshold(\'' + g.id + '\', this.value)">' + thOpts(g.threshold) + '</select>' +
       '<button class="del" title="Quitar" onclick="delGame(\'' + g.id + '\')">✕</button>' +
       '</div>';
   }).join('');
 }
+function setThreshold(id, val) {
+  var v = parseInt(val, 10) || 0;
+  var games = (cfg.stats.games || []).map(function (g) {
+    if (g.id === id) g.threshold = v;
+    return g;
+  });
+  api('POST', '/config', { stats: Object.assign({}, cfg.stats, { games: games }) }).then(function (r) {
+    if (r.ok) { toast('Alerta: avisar con ' + v + '+ online'); api('GET', '/config').then(fillConfig); loadStats(); }
+    else toast((r.errors || ['Error al guardar']).join(' · '), true);
+  });
+}
 function checkAlerts(st) {
-  if (!st.alertsEnabled) {
-    document.getElementById('alertBanner').classList.remove('show');
-    prevAlerts = {};
-    return;
-  }
-  var now = {};
-  var msgs = [];
+  var banner = document.getElementById('alertBanner');
+  if (!st.alertsEnabled) { banner.classList.remove('show'); prevAlerts = {}; return; }
+  var now = {}, msgs = [];
   (st.favorites || []).forEach(function (g) {
     if (g.overThreshold) {
       now[g.id] = true;
-      msgs.push(g.name + ': ' + g.onlineCount + ' online (umbral ' + g.threshold + ')');
+      msgs.push(g.name + ': ' + g.onlineCount + ' online');
       if (!prevAlerts[g.id]) {
         toast('🟡 ' + g.name + ': ' + g.onlineCount + ' jugadores online');
         if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('DS WiFi · Wiimmfi', { body: g.name + ': ' + g.onlineCount + ' online' });
+          new Notification('DS WiFi · Wiimmfi', { body: g.name + ': ' + g.onlineCount + ' jugadores online' });
         }
       }
     }
   });
   prevAlerts = now;
-  var banner = document.getElementById('alertBanner');
-  var txt = document.getElementById('alertTxt');
-  if (msgs.length) { txt.textContent = '¡Jugadores online! ' + msgs.join(' · '); banner.classList.add('show'); }
-  else banner.classList.remove('show');
+  if (msgs.length) {
+    document.getElementById('alertTxt').textContent = '¡Jugadores online! ' + msgs.join(' · ');
+    banner.classList.add('show');
+  } else banner.classList.remove('show');
+}
+var freshSince = 0;
+function refreshStats(after) {
+  freshSince = Date.now();
+  api('POST', '/stats/refresh').then(function () {
+    toast('Actualizando estadísticas…');
+    var tries = 0;
+    var iv = setInterval(function () {
+      tries++;
+      api('GET', '/stats').then(function (st) {
+        if ((st.updatedAt || 0) >= freshSince || tries > 18) {
+          clearInterval(iv);
+          loadStats();
+          if (after) after(st);
+        }
+      });
+    }, 2000);
+  }).catch(function () {});
 }
 function openGames() {
   document.getElementById('gameModal').classList.add('open');
   document.getElementById('gameSearch').value = '';
   searchGames('');
+  refreshStats(function () { searchGames(document.getElementById('gameSearch').value); });
   setTimeout(function () { document.getElementById('gameSearch').focus(); }, 100);
+}
+function toggleDet(id) {
+  var el = document.getElementById('det-' + id);
+  if (el) el.classList.toggle('open');
 }
 function searchGames(q) {
   api('GET', '/games?q=' + encodeURIComponent(q || '')).then(function (r) {
@@ -809,35 +893,27 @@ function searchGames(q) {
     if (!r.games || !r.games.length) { box.innerHTML = '<div class="empty">Sin resultados</div>'; return; }
     box.innerHTML = r.games.map(function (g) {
       var added = (cfg.stats.games || []).some(function (f) { return f.id === g.id; });
-      return '<div class="game">' +
-        '<div class="cnt">' + g.online + '</div>' +
-        '<div class="ginfo"><div class="gnm">' + esc(g.name) + '</div>' +
-        '<div class="gst">' + esc(g.status.split('.')[0]) + '</div></div>' +
+      return '<div class="game" style="cursor:pointer" onclick="toggleDet(\'' + g.id + '\')">' +
+        '<div class="cnt" title="Jugadores online ahora">' + g.online + '</div>' +
+        '<div class="ginfo"><div class="gnm">' + esc(g.name.split('(')[0].trim()) + consoleBadges(g.console) + ' ' + statusBadge(g.status) + '</div>' +
+        '<div class="gst">Perfiles: ' + esc(g.profiles) + ' · Logins: ' + esc(g.logins) + '</div>' +
+        '<div class="gdetail" id="det-' + g.id + '"><b>Estado:</b> ' + esc(g.status || '—') + '<br><b>Perfiles registrados:</b> ' + esc(g.profiles) + '<br><b>Logins totales:</b> ' + esc(g.logins) + '<br><b>ID Wiimmfi:</b> ' + g.id + '</div></div>' +
         (added ? '<span class="badge on">✓</span>' :
-          '<button class="pin" title="Seguir" onclick="addFavorite(\'' + g.id + '\',\'' + esc(g.name.replace(/\'/g,'')) + '\')">+</button>') +
+          '<button class="pin" title="Seguir" onclick="event.stopPropagation();addFavorite(\'' + g.id + '\')">+</button>') +
         '</div>';
     }).join('');
   }).catch(function () {});
 }
 function addFavorite(id, name) {
-  var games = (cfg.stats.games || []).slice();
-  if (games.some(function (f) { return f.id === id; })) return;
-  games.push({ id: id, name: name, threshold: 3 });
-  api('POST', '/config', { stats: Object.assign({}, cfg.stats, { games: games }) }).then(function (r) {
-    if (r.ok) { toast('Juego agregado'); api('GET', '/config').then(fillConfig); loadStats(); searchGames(document.getElementById('gameSearch').value); }
-  });
-}
-function cycleThreshold(id) {
-  var seq = [1, 3, 5, 10, 20];
-  var games = (cfg.stats.games || []).map(function (g) {
-    if (g.id === id) {
-      var i = seq.indexOf(g.threshold);
-      g.threshold = seq[(i + 1) % seq.length];
-    }
-    return g;
-  });
-  api('POST', '/config', { stats: Object.assign({}, cfg.stats, { games: games }) }).then(function (r) {
-    if (r.ok) { api('GET', '/config').then(fillConfig); loadStats(); }
+  api('GET', '/games').then(function (r) {
+    var g = (r.games || []).find(function (x) { return x.id === id; }) || {};
+    var games = (cfg.stats.games || []).slice();
+    if (games.some(function (f) { return f.id === id; })) return;
+    games.push({ id: id, name: g.name || name, threshold: 3 });
+    api('POST', '/config', { stats: Object.assign({}, cfg.stats, { games: games }) }).then(function (r2) {
+      if (r2.ok) { toast('Siguiendo: ' + (g.name || name)); api('GET', '/config').then(fillConfig); loadStats(); searchGames(document.getElementById('gameSearch').value); }
+      else toast((r2.errors || ['Error']).join(' · '), true);
+    });
   });
 }
 function delGame(id) {

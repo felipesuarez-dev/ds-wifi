@@ -28,6 +28,27 @@ Primera versión pública (Beta).
 ### Changed
 - `macList` ahora almacena objetos `{ mac, name }` (con migración automática del formato anterior).
 
+## [0.2.2] - 2026-08-22
+
+Parche: fiabilidad y claridad en la sección de juegos de Wiimmfi.
+
+### Added
+- Botón **⟳ Actualizar** (en Mis juegos y en el selector) para refrescar los jugadores online al instante, sin esperar el ciclo automático.
+- **Badges por juego**: consola (`DS` / `WII` / `WW` / `DSI`) y estado (`OK` / `PRUEBAS` / `PARCIAL`); al tocar el estado se ve el detalle completo tal como lo publica Wiimmfi.
+- Columnas **Perfiles** y **Logins totales** por juego.
+- El listado se ordena por **más jugadores online primero**.
+- Aviso visible cuando los datos están desactualizados o Cloudflare bloqueó una consulta.
+
+### Changed
+- Control de alerta reemplazado: ahora es un selector visible **"🔔 Alerta: N+ online"** por juego (antes era un botón 🎯 sin feedback que no hacía nada).
+- Los presets 1h / 2h / Indefinido muestran **cuál está activo**.
+- El selector de juegos refresca los datos automáticamente al abrirlo; intervalo base del scraper baja a 2 min con reintento rápido si un ciclo falla.
+- Cabeceras `Cache-Control: no-store` en la interfaz para evitar UIs viejas cacheadas.
+
+### Fixed
+- Scraper colgado indefinidamente en la primera carga bajo Xvfb (timeouts en navegación + reconstrucción automática del navegador ante cualquier error de ciclo).
+- Errores silenciosos: ahora todo fallo queda registrado y avisa en pantalla.
+
 ## [0.2.1] - 2026-08-22
 
 Parche: corrección en el conteo de clientes conectados.

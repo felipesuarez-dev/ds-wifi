@@ -1,74 +1,151 @@
 #!/usr/bin/env python3
-# ds-wifi scraper: obtiene el listado dinámico de juegos de Wiimmfi con su
-# nº de jugadores online y lo escribe en config/stats.json.
-# Usa nodriver + Google Chrome real (pasa el reto de Cloudflare).
-import re, json, time, asyncio
+# ds-wifi scraper: listado dinámico de juegos de Wiimmfi (nodriver + Chrome real).
+# Escribe config/stats.json y atiende refrescos manuales vía config/stats.refresh.
+import re, json, time, asyncio, os
 import nodriver as uc
 
-CFG = '/opt/ds-wifi/config/ap.json'
-STATS = '/opt/ds-wifi/config/stats.json'
+BASE = '/opt/ds-wifi'
+CFG = os.path.join(BASE, 'config', 'ap.json')
+STATS = os.path.join(BASE, 'config', 'stats.json')
+FLAG = os.path.join(BASE, 'config', 'stats.refresh')
 URL = 'https://wiimmfi.de/stat?m=c'
+
+CONSOLAS = {
+    'NDS-34x16.png': ['DS'],
+    'Wii-34x16.png': ['WII'],
+    'WiiWare-34x16.png': ['WW'],
+    'DSiWare-34x16.png': ['DSI'],
+    'Mix-34x16.png': ['DS', 'WII'],
+}
+
+def log(m):
+    print('[scraper] %s' % m, flush=True)
 
 def load_interval():
     try:
         cfg = json.load(open(CFG))
-        return max(1, int(cfg.get('stats', {}).get('intervalMinutes', 3))) * 60
+        return max(1, int(cfg.get('stats', {}).get('intervalMinutes', 2))) * 60
     except Exception:
-        return 180
+        return 120
 
 def clean(s):
     s = re.sub(r'<[^>]+>', ' ', s)
-    s = s.replace('\xa0', ' ')
+    s = s.replace('&nbsp;', ' ').replace('\xa0', ' ')
     return re.sub(r'\s+', ' ', s).strip()
+
+def consoles(td_html):
+    out = []
+    for src in re.findall(r'src="/images/([^"]+)"', td_html):
+        out += CONSOLAS.get(src.split('/')[-1], [])
+    return out or ['?']
 
 def parse(html):
     games = []
     for r in re.findall(r'<tr class="tr[01]">(.*?)</tr>', html, re.S):
         tds = re.findall(r'<td[^>]*>(.*?)</td>', r, re.S)
-        if len(tds) < 5:
+        if len(tds) < 6:
             continue
         gid = clean(tds[0])
         name = clean(tds[1])
-        status = clean(tds[2])
         online_raw = clean(tds[4]).replace('k', '')
         try:
             online = int(online_raw) if online_raw not in ('—', '-', '') else 0
         except ValueError:
             online = 0
         if gid and name:
-            games.append({'id': gid, 'name': name, 'status': status, 'online': online})
+            games.append({
+                'id': gid,
+                'name': name,
+                'status': clean(tds[2]),
+                'console': consoles(tds[1]),
+                'online': online,
+                'profiles': clean(tds[3]).replace(' ', ''),
+                'logins': clean(tds[5]).replace(' ', ''),
+            })
+    games.sort(key=lambda g: (-g['online'], g['name']))
     return games
 
-async def scrape_once(browser):
-    tab = await browser.get(URL)
-    try:
-        for _ in range(20):
-            await asyncio.sleep(5)
-            title = await tab.evaluate('document.title')
-            if title and not ('moment' in title.lower() or 'verificaci' in title.lower()):
-                break
-        html = await tab.get_content()
-        games = parse(html)
-        json.dump({'updatedAt': int(time.time() * 1000), 'games': games}, open(STATS, 'w'))
-        return len(games)
-    finally:
+def write_stats(games, error=None):
+    json.dump({
+        'updatedAt': int(time.time() * 1000),
+        'error': error,
+        'games': games,
+    }, open(STATS, 'w'))
+
+def is_blocked(html):
+    low = (html or '').lower()
+    return len(low) < 5000 or 'just a moment' in low or 'challenge-platform' in low
+
+async def wait_challenge(tab, max_s=90):
+    start = time.time()
+    while time.time() - start < max_s:
         try:
-            await tab.close()
+            title = await tab.evaluate('document.title')
         except Exception:
-            pass
+            title = ''
+        if title and not ('moment' in title.lower() or 'verificaci' in title.lower()):
+            return True
+        await asyncio.sleep(5)
+    return False
+
+async def scrape_once(browser):
+    tab = None
+    try:
+        try:
+            tab = await asyncio.wait_for(browser.get(URL), timeout=60)
+        except (asyncio.TimeoutError, TimeoutError):
+            log('timeout abriendo la página')
+            return
+        ok = await wait_challenge(tab)
+        html = await tab.get_content()
+        blocked = is_blocked(html)
+        games = [] if blocked else parse(html)
+        err = 'cloudflare' if blocked else None
+        write_stats(games, error=err)
+        log('%d juegos%s' % (len(games), (' (%s)' % err) if err else ''))
+    finally:
+        if tab:
+            try:
+                await tab.close()
+            except Exception:
+                pass
 
 async def main():
-    browser = await uc.start(headless=False)
-    try:
-        while True:
-            try:
-                n = await scrape_once(browser)
-                print('[scraper] %d juegos' % n)
-            except Exception as e:
-                print('[scraper] error:', e)
-            await asyncio.sleep(load_interval())
-    finally:
-        browser.stop()
+    next_try = 0
+    while True:
+        browser = None
+        try:
+            browser = await uc.start(headless=False)
+            while True:
+                now = time.time()
+                manual = os.path.isfile(FLAG)
+                if not (manual or now >= next_try):
+                    await asyncio.sleep(5)
+                    continue
+                if manual:
+                    os.remove(FLAG)
+                    log('refresco manual solicitado')
+                err = False
+                try:
+                    await scrape_once(browser)
+                    next_try = now + load_interval()
+                except Exception as e:
+                    log('error de ciclo: %s' % e)
+                    err = True
+                    next_try = now + 5
+                if err:
+                    log('reconstruyendo navegador…')
+                    break
+        except Exception as e:
+            log('navegador: %s' % e)
+        finally:
+            if browser:
+                try:
+                    browser.stop()
+                except Exception:
+                    pass
+        espera = max(3, min(15, int(next_try - time.time())))
+        await asyncio.sleep(espera)
 
 if __name__ == '__main__':
     asyncio.run(main())

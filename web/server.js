@@ -166,7 +166,7 @@ function serveFile(res, fp) {
     if (err) { res.writeHead(404); res.end('Not found'); return; }
     const ext = path.extname(fp);
     const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml' };
-    res.writeHead(200, { 'Content-Type': types[ext] || 'text/plain' });
+    res.writeHead(200, { 'Content-Type': types[ext] || 'text/plain', 'Cache-Control': 'no-store' });
     res.end(data);
   });
 }
@@ -230,7 +230,8 @@ const server = http.createServer(async (req, res) => {
         const online = typeof g.online === 'number' ? g.online : null;
         return {
           id: f.id, name: f.name || g.name || f.id, threshold: f.threshold || 0,
-          onlineCount: online, status: g.status || '',
+          onlineCount: online, status: g.status || '', console: g.console || [],
+          profiles: g.profiles || null, logins: g.logins || null,
           overThreshold: online !== null && online >= (f.threshold || 0)
         };
       });
@@ -238,9 +239,21 @@ const server = http.createServer(async (req, res) => {
         enabled: !!cfg.stats.enabled,
         alertsEnabled: !!cfg.stats.alerts,
         updatedAt: (raw && raw.updatedAt) || null,
+        error: (raw && raw.error) || null,
         gameCount: allGames.length,
         favorites
       });
+    }
+    if (url === '/api/stats/refresh' && req.method === 'POST') {
+      try { fs.writeFileSync(path.join(BASE, 'config', 'stats.refresh'), String(Date.now())); } catch (e) {}
+      return send(res, 200, { ok: true });
+    }
+    if (url === '/api/games') {
+      const raw = readStatsFile();
+      const q = decodeURIComponent((req.url.split('?')[1] || '').replace(/q=/, '')).toLowerCase();
+      let games = (raw && raw.games) || [];
+      if (q) games = games.filter(g => g.name.toLowerCase().includes(q));
+      return send(res, 200, { updatedAt: (raw && raw.updatedAt) || null, games: games.slice(0, 150) });
     }
     if (url === '/api/games') {
       const raw = readStatsFile();
