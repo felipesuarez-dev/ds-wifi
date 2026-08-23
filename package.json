@@ -1,6 +1,6 @@
 {
   "name": "ds-wifi",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Punto de acceso WiFi para Nintendo DS/DS Lite con control web (filtro MAC, aislamiento guest, stats de Wiimmfi y alertas).",
   "private": true,
   "license": "MIT"

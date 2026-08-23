@@ -16,3 +16,4 @@ scraper/node_modules/
 scraper/.cache/
 scraper/package-lock.json
 scraper/venv/
+__pycache__/
