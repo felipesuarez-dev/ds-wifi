@@ -19,7 +19,7 @@
   </tr>
   <tr>
     <td align="center"><b>Mis juegos</b> — favoritos con jugadores online y alerta</td>
-    <td align="center"><b>Selector</b> — buscá cualquier juego y seguílo</td>
+    <td align="center"><b>Selector</b> — busca cualquier juego y síguelo</td>
   </tr>
 </table>
 
@@ -48,6 +48,16 @@ sudo ./install.sh
 El instalador instala los paquetes (`hostapd`, `dnsmasq`, `iw`, `node`), crea el usuario `dswifi`, detecta las interfaces WiFi y LAN, copia todo a `/opt/ds-wifi` y arranca el servicio web.
 
 Abre **http://&lt;IP-del-servidor&gt;:3120**.
+
+### Instalación con un agente de IA (recomendado)
+
+Este README está escrito para que una IA de código lo ejecute por ti. Si usas **Claude Code**, **OpenCode**, **Codex** u otro agente similar, clona el proyecto, abre el agente dentro de la carpeta y pídele algo como:
+
+> «Lee el README de este proyecto e instala ds-wifi en esta máquina siguiendo la sección de instalación.»
+
+El agente se encarga de todo: instala las dependencias, ejecuta `install.sh`, verifica que los servicios quedaron activos y te devuelve la URL final. Si algo falla (permisos, interfaz de red distinta, paquete faltante), lo diagnostica y lo corrige sobre la marcha — algo que un script solo no puede hacer.
+
+> 💡 Funciona bien porque `install.sh` es idempotente: puede re-ejecutarse sin romper nada, y toda la configuración posterior (SSID, MACs, alertas) se hace desde la interfaz web, no editando archivos.
 
 ### Scraper de Wiimmfi (opcional)
 

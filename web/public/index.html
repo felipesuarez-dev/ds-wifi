@@ -819,7 +819,7 @@ function renderFavorites(st) {
     return '<div class="game">' +
       '<div class="cnt' + (g.onlineCount === null ? ' null' : '') + '" title="Jugadores online ahora">' + cnt + '</div>' +
       '<div class="ginfo"><div class="gnm">' + esc(g.name) + ' ' + over + '</div>' +
-      '<div class="gst">🔔 avisa con ' + g.threshold + '+ online · cambialo acá al lado →</div></div>' +
+      '<div class="gst">🔔 avisa con N+ online · cámbialo en el selector →</div></div>' +
       '<select class="alert-sel" onchange="setThreshold(\'' + g.id + '\', this.value)">' + thOpts(g.threshold) + '</select>' +
       '<button class="del" title="Quitar" onclick="delGame(\'' + g.id + '\')">✕</button>' +
       '</div>';
