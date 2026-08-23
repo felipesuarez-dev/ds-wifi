@@ -9,6 +9,10 @@ Environment=HOME=/root
 ExecStart=/usr/bin/xvfb-run -a -s "-screen 0 1280x800x24" /opt/ds-wifi/scraper/venv/bin/python /opt/ds-wifi/scraper/scraper.py
 Restart=always
 RestartSec=30
+# Cinturón de seguridad: si el proceso se desborda, systemd lo reinicia
+# en vez de quedarse sin RAM en el host.
+MemoryHigh=1200M
+MemoryMax=1500M
 KillMode=mixed
 TimeoutStopSec=20
 FinalKillSignal=SIGKILL
