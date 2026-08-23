@@ -8,7 +8,9 @@ BASE = '/opt/ds-wifi'
 CFG = os.path.join(BASE, 'config', 'ap.json')
 STATS = os.path.join(BASE, 'config', 'stats.json')
 FLAG = os.path.join(BASE, 'config', 'stats.refresh')
+PROFILE = os.path.join(BASE, 'config', 'chrome-profile')
 URL = 'https://wiimmfi.de/stat?m=c'
+MAX_CYCLES = 30
 
 CONSOLAS = {
     'NDS-34x16.png': ['DS'],
@@ -89,33 +91,38 @@ async def wait_challenge(tab, max_s=90):
     return False
 
 async def scrape_once(browser):
-    tab = None
+    # Sin try/finally con tab.close(): cerrar la última pestaña apaga Chrome
+    # entero. browser.get() reutiliza la primera pestaña, así el navegador
+    # vive entre ciclos y solo se reconstruye de forma acotada.
     try:
-        try:
-            tab = await asyncio.wait_for(browser.get(URL), timeout=60)
-        except (asyncio.TimeoutError, TimeoutError):
-            log('timeout abriendo la página')
-            return
-        ok = await wait_challenge(tab)
-        html = await tab.get_content()
-        blocked = is_blocked(html)
-        games = [] if blocked else parse(html)
-        err = 'cloudflare' if blocked else None
-        write_stats(games, error=err)
-        log('%d juegos%s' % (len(games), (' (%s)' % err) if err else ''))
-    finally:
-        if tab:
-            try:
-                await tab.close()
-            except Exception:
-                pass
+        tab = await asyncio.wait_for(browser.get(URL), timeout=60)
+    except (asyncio.TimeoutError, TimeoutError):
+        log('timeout abriendo la página')
+        return
+    ok = await wait_challenge(tab)
+    html = await tab.get_content()
+    blocked = is_blocked(html)
+    games = [] if blocked else parse(html)
+    err = 'cloudflare' if blocked else None
+    write_stats(games, error=err)
+    log('%d juegos%s' % (len(games), (' (%s)' % err) if err else ''))
+
+def stop_browser(browser):
+    if not browser:
+        return
+    try:
+        browser.stop()
+    except Exception as e:
+        log('error deteniendo navegador: %s' % e)
 
 async def main():
+    os.makedirs(PROFILE, exist_ok=True)
     next_try = 0
+    ciclos = 0
     while True:
         browser = None
         try:
-            browser = await uc.start(headless=False)
+            browser = await uc.start(headless=False, user_data_dir=PROFILE)
             while True:
                 now = time.time()
                 manual = os.path.isfile(FLAG)
@@ -129,21 +136,21 @@ async def main():
                 try:
                     await scrape_once(browser)
                     next_try = now + load_interval()
+                    ciclos += 1
                 except Exception as e:
                     log('error de ciclo: %s' % e)
                     err = True
                     next_try = now + 5
-                if err:
-                    log('reconstruyendo navegador…')
+                # Vida útil acotada: ante error o cada MAX_CYCLES éxitos se
+                # reconstruye el navegador para no acumular memoria.
+                if err or ciclos >= MAX_CYCLES:
+                    motivo = 'error' if err else 'mantenimiento preventivo'
+                    log('reconstruyendo navegador (%s)…' % motivo)
                     break
         except Exception as e:
             log('navegador: %s' % e)
         finally:
-            if browser:
-                try:
-                    browser.stop()
-                except Exception:
-                    pass
+            stop_browser(browser)
         espera = max(3, min(15, int(next_try - time.time())))
         await asyncio.sleep(espera)
 
