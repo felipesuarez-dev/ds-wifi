@@ -4,6 +4,15 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/) y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
+## [0.2.4] - 2026-08-30
+
+Parche: la mitigación de 0.2.3 no llegaba a aplicarse y dejaba procesos huérfanos.
+
+### Fixed
+- **Reconstrucción de Chrome en cada ciclo**: el contador `ciclos` se declaraba fuera del bucle de reconstrucción y nunca volvía a cero, así que al alcanzar `MAX_CYCLES` la condición quedaba permanentemente cierta. En vez de reconstruir cada 30 ciclos, el scraper reconstruía el navegador en **cada** ciclo: 368 reconstrucciones en 24 h frente a las ~16 previstas. Ahora el contador vive junto al navegador que cuenta.
+- **Procesos huérfanos de Chrome**: `browser.stop()` de nodriver solo hace `terminate()` sobre `/usr/bin/google-chrome`, que es un script envoltorio; sus hijos reales (zygotes, renderers, GPU) sobrevivían y se acumulaban en el cgroup hasta que `MemoryMax` disparaba el OOM killer (3 veces desde el 26/08, con picos de 1,4 GB de RAM y 2,8 GB de swap para un solo servicio). `stop_browser()` ahora captura el árbol de procesos **antes** de parar —al morir el padre los hijos se reparentan a init y se pierde el vínculo— y aplica SIGTERM, espera acotada y SIGKILL a lo que siga en pie.
+- El árbol de procesos se lee de `/proc`, sin dependencias nuevas. No se usa `killpg` porque Chrome comparte grupo de procesos con el propio scraper y con Xvfb: matar el grupo apagaría el servicio entero.
+
 ## [0.2.3] - 2026-08-23
 
 Parche: fuga de memoria en el scraper de Wiimmfi.
