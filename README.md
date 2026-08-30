@@ -184,7 +184,7 @@ sudoers/dswifi         # permisos acotados para el usuario dswifi
 
 MIT © 2026 — ver [LICENSE](LICENSE).
 
-[version-badge]: https://img.shields.io/badge/versi%C3%B3n-0.2.3-34d399?style=flat-square
+[version-badge]: https://img.shields.io/badge/versi%C3%B3n-0.2.4-34d399?style=flat-square
 [status-badge]: https://img.shields.io/badge/estado-Beta-fbbf24?style=flat-square
 [license-badge]: https://img.shields.io/badge/licencia-MIT-a8d8a8?style=flat-square
 [bash-badge]: https://img.shields.io/badge/bash-4EAA25?style=flat-square&logo=gnubash&logoColor=white
