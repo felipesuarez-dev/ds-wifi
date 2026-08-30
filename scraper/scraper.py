@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # ds-wifi scraper: listado dinámico de juegos de Wiimmfi (nodriver + Chrome real).
 # Escribe config/stats.json y atiende refrescos manuales vía config/stats.refresh.
-import re, json, time, asyncio, os
+import re, json, time, asyncio, os, signal
 import nodriver as uc
 
 BASE = '/opt/ds-wifi'
@@ -107,20 +107,86 @@ async def scrape_once(browser):
     write_stats(games, error=err)
     log('%d juegos%s' % (len(games), (' (%s)' % err) if err else ''))
 
+def proc_state(pid):
+    # Devuelve el estado del proceso, o None si ya no existe. El campo comm
+    # puede traer espacios y paréntesis, así que se corta tras el último ')'.
+    try:
+        with open('/proc/%d/stat' % pid) as fh:
+            return fh.read().rpartition(')')[2].split()[0]
+    except (OSError, IndexError):
+        return None
+
+
+def alive(pid):
+    state = proc_state(pid)
+    return state is not None and state != 'Z'
+
+
+def descendants(pid):
+    # Árbol completo bajo pid, leído de /proc (sin dependencias externas).
+    children = {}
+    for entry in os.listdir('/proc'):
+        if not entry.isdigit():
+            continue
+        try:
+            with open('/proc/%s/stat' % entry) as fh:
+                ppid = int(fh.read().rpartition(')')[2].split()[1])
+        except (OSError, IndexError, ValueError):
+            continue
+        children.setdefault(ppid, []).append(int(entry))
+    found, pending = [], [pid]
+    while pending:
+        for child in children.get(pending.pop(), []):
+            found.append(child)
+            pending.append(child)
+    return found
+
+
+def reap(pids):
+    # SIGTERM, espera acotada, y SIGKILL a lo que siga en pie.
+    for sig, grace in ((signal.SIGTERM, 5.0), (signal.SIGKILL, 2.0)):
+        if not any(alive(p) for p in pids):
+            return
+        for pid in pids:
+            if alive(pid):
+                try:
+                    os.kill(pid, sig)
+                except OSError:
+                    pass
+        limit = time.time() + grace
+        while time.time() < limit and any(alive(p) for p in pids):
+            time.sleep(0.2)
+    resto = [p for p in pids if alive(p)]
+    if resto:
+        log('%d procesos de Chrome no cerraron: %s' % (len(resto), resto))
+
+
 def stop_browser(browser):
     if not browser:
         return
+    # browser.stop() solo hace terminate() sobre /usr/bin/google-chrome, que es
+    # un script envoltorio: sus hijos reales (zygotes, renderers, GPU) quedan
+    # huérfanos y se acumulan hasta agotar la memoria del cgroup. El árbol se
+    # captura ANTES de parar, porque al morir el padre se reparentan a init y
+    # deja de haber forma de relacionarlos.
+    proceso = getattr(browser, '_process', None)
+    pid = getattr(proceso, 'pid', None) or getattr(browser, '_process_pid', None)
+    arbol = (descendants(pid) + [pid]) if pid else []
     try:
         browser.stop()
     except Exception as e:
         log('error deteniendo navegador: %s' % e)
+    if arbol:
+        reap(arbol)
 
 async def main():
     os.makedirs(PROFILE, exist_ok=True)
     next_try = 0
-    ciclos = 0
     while True:
         browser = None
+        # El contador vive con el navegador: si se declara fuera del bucle no
+        # vuelve a bajar de MAX_CYCLES y cada ciclo acaba reconstruyendo Chrome.
+        ciclos = 0
         try:
             browser = await uc.start(headless=False, user_data_dir=PROFILE)
             while True:
