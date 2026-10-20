@@ -71,7 +71,7 @@ El worker usa **nodriver + Google Chrome real** (headful bajo Xvfb), que es lo q
 
 **No hay que pegar URLs ni cookies**: en "Wiimmfi · Mis juegos" buscas el juego que te interesa, lo agregas a tus favoritos y eliges el umbral de alerta. Todo dinámico.
 
-> Requiere Google Chrome instalado (el instalador lo baja automáticamente) y usa ~300 MB de RAM por el navegador.
+> Requiere Google Chrome instalado (el instalador lo baja automáticamente) y usa ~1.2 GB de RAM por el navegador.
 
 ## Cómo funciona
 
