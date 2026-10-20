@@ -9,8 +9,7 @@ Environment=HOME=/root
 # Chrome usa /tmp para la memoria compartida (--disable-dev-shm-usage).
 # Un tmpfs privado evita que el reclaim de la cgroup lo mande a disco.
 TemporaryFileSystem=/tmp:size=2G,mode=1777
-ExecStartPre=/bin/mkdir -p /tmp/.X11-unix
-ExecStartPre=/bin/chmod 1777 /tmp/.X11-unix
+ExecStartPre=/bin/sh -c 'mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix'
 ExecStart=/usr/bin/xvfb-run -a -s "-screen 0 1280x800x24" /opt/ds-wifi/scraper/venv/bin/python /opt/ds-wifi/scraper/scraper.py
 Restart=always
 RestartSec=30
