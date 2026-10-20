@@ -6,6 +6,10 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.
 
 ## [Unreleased]
 
+### Added
+- **Actividad diaria en el selector**: cada juego muestra el pico de jugadores online del día (hora Chile) y "sin actividad" si no tuvo ninguno en las muestras del scraper. Es un pico muestreado cada 3 minutos, no jugadores únicos.
+- **Monitoreo del scraper**: `config/scraper-status.json` guarda estado, duración, CPU/RAM/IO del cgroup, fallos, backoff e historial de 24 h. Se expone en `GET /api/scraper` para la tarjeta de Glance.
+
 ### Fixed
 - **Thrashing de disco del scraper**: Chrome escribe su memoria compartida en `/tmp` (`--disable-dev-shm-usage`) y el cgroup la reclamaba contra `MemoryHigh=1200M`, generando lecturas masivas y disco al 99% durante horas. La unit ahora monta un tmpfs privado para `/tmp`, sube el límite de memoria a 2.5G y acota CPU (`CPUQuota=200%`), tareas y tiempo de vida (`RuntimeMaxSec=6h`).
 - **Bucles infinitos de Cloudflare**: los timeouts se trataban como ciclos exitosos, así que Chrome nunca se reconstruía. Ahora hay timeouts duros en navegación, challenge y lectura del HTML, backoff exponencial (3 a 15 min) y reconstrucción tras 3 fallos consecutivos.

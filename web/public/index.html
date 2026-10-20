@@ -893,11 +893,17 @@ function searchGames(q) {
     if (!r.games || !r.games.length) { box.innerHTML = '<div class="empty">Sin resultados</div>'; return; }
     box.innerHTML = r.games.map(function (g) {
       var added = (cfg.stats.games || []).some(function (f) { return f.id === g.id; });
+      var today = (g.todayMax || 0) > 0
+        ? '<span style="color:var(--mint);font-weight:600">Hoy: pico ' + g.todayMax + '</span>'
+        : '<span style="color:var(--t3)">Hoy: sin actividad</span>';
+      var todayDetail = (g.todayMax || 0) > 0
+        ? 'pico ' + g.todayMax + (g.todayLastActiveAt ? ' · visto ' + timeAgo(g.todayLastActiveAt) : '')
+        : 'sin actividad';
       return '<div class="game" style="cursor:pointer" onclick="toggleDet(\'' + g.id + '\')">' +
         '<div class="cnt" title="Jugadores online ahora">' + g.online + '</div>' +
         '<div class="ginfo"><div class="gnm">' + esc(g.name.split('(')[0].trim()) + consoleBadges(g.console) + ' ' + statusBadge(g.status) + '</div>' +
-        '<div class="gst">Perfiles: ' + esc(g.profiles) + ' · Logins: ' + esc(g.logins) + '</div>' +
-        '<div class="gdetail" id="det-' + g.id + '"><b>Estado:</b> ' + esc(g.status || '—') + '<br><b>Perfiles registrados:</b> ' + esc(g.profiles) + '<br><b>Logins totales:</b> ' + esc(g.logins) + '<br><b>ID Wiimmfi:</b> ' + g.id + '</div></div>' +
+        '<div class="gst">Perfiles: ' + esc(g.profiles) + ' · Logins: ' + esc(g.logins) + ' · ' + today + '</div>' +
+        '<div class="gdetail" id="det-' + g.id + '"><b>Estado:</b> ' + esc(g.status || '—') + '<br><b>Actividad hoy:</b> ' + todayDetail + '<br><b>Perfiles registrados:</b> ' + esc(g.profiles) + '<br><b>Logins totales:</b> ' + esc(g.logins) + '<br><b>ID Wiimmfi:</b> ' + g.id + '</div></div>' +
         (added ? '<span class="badge on">✓</span>' :
           '<button class="pin" title="Seguir" onclick="event.stopPropagation();addFavorite(\'' + g.id + '\')">+</button>') +
         '</div>';
