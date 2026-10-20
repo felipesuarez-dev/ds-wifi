@@ -12,6 +12,7 @@ const GEN_DIR = path.join(BASE, 'config', 'generated');
 const PUBLIC_DIR = path.join(BASE, 'web', 'public');
 const STATS_PATH = path.join(BASE, 'config', 'stats.json');
 const DAILY_PATH = path.join(BASE, 'config', 'daily-activity.json');
+const SCRAPER_STATUS_PATH = path.join(BASE, 'config', 'scraper-status.json');
 const LASTSEEN_PATH = path.join(BASE, 'config', 'lastseen.json');
 
 const DEFAULTS = {
@@ -149,6 +150,64 @@ function readDailyActivity() {
   }
 }
 
+function readScraperStatus() {
+  try { return JSON.parse(fs.readFileSync(SCRAPER_STATUS_PATH, 'utf8')); } catch (e) { return null; }
+}
+
+function isScraperActive() {
+  return new Promise((resolve) => {
+    execFile('systemctl', ['is-active', 'ds-wifi-scraper'], (err, stdout) => {
+      resolve(!err && (stdout || '').trim() === 'active');
+    });
+  });
+}
+
+function agoText(ts) {
+  if (!ts) return '—';
+  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (s < 60) return 'hace ' + s + ' s';
+  if (s < 3600) return 'hace ' + Math.floor(s / 60) + ' min';
+  if (s < 86400) return 'hace ' + Math.floor(s / 3600) + ' h ' + Math.floor((s % 3600) / 60) + ' min';
+  return 'hace ' + Math.floor(s / 86400) + ' d';
+}
+
+function inText(ts) {
+  if (!ts) return '—';
+  const s = Math.max(0, Math.floor((ts - Date.now()) / 1000));
+  if (s <= 0) return 'ahora';
+  if (s < 60) return 'en ' + s + ' s';
+  if (s < 3600) return 'en ' + Math.floor(s / 60) + ' min';
+  return 'en ' + Math.floor(s / 3600) + ' h ' + Math.floor((s % 3600) / 60) + ' min';
+}
+
+function fmtBytes(n) {
+  if (n === null || n === undefined) return '—';
+  if (n < 1024) return n + ' B';
+  if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+  if (n < 1073741824) return (n / 1048576).toFixed(1) + ' MB';
+  return (n / 1073741824).toFixed(2) + ' GB';
+}
+
+function fmtSpan(ms) {
+  if (ms === null || ms === undefined) return '—';
+  const s = Math.max(0, Math.floor(ms / 1000));
+  if (s < 60) return s + ' s';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + ' min';
+  return Math.floor(m / 60) + ' h ' + (m % 60) + ' min';
+}
+
+function fmtDuration(ms) {
+  if (ms === null || ms === undefined) return '—';
+  if (ms < 1000) return ms + ' ms';
+  if (ms < 60000) return (ms / 1000).toFixed(1) + ' s';
+  return fmtSpan(ms);
+}
+
+function fmtPct(n) {
+  return n === null || n === undefined ? '—' : Number(n).toFixed(1) + '%';
+}
+
 // ---- lastSeen (última conexión por dispositivo) ----
 let lastSeenMap = {};
 try { lastSeenMap = JSON.parse(fs.readFileSync(LASTSEEN_PATH, 'utf8')); } catch (e) {}
@@ -213,7 +272,7 @@ const server = http.createServer(async (req, res) => {
   const cfg = loadConfig();
 
   const isApi = url.startsWith('/api/');
-  const isPublic = url === '/api/status' || url === '/api/logs' || url === '/api/stats' || url === '/api/games';
+  const isPublic = url === '/api/status' || url === '/api/logs' || url === '/api/stats' || url === '/api/games' || url === '/api/scraper';
   if (isApi && !isPublic && cfg.pin) {
     const pin = req.headers['x-pin'] || '';
     if (pin !== cfg.pin) return send(res, 401, { error: 'PIN inválido' });
@@ -257,6 +316,76 @@ const server = http.createServer(async (req, res) => {
         error: (raw && raw.error) || null,
         gameCount: allGames.length,
         favorites
+      });
+    }
+    if (url === '/api/scraper') {
+      const st = readScraperStatus();
+      const stats = readStatsFile();
+      const active = await isScraperActive();
+      const now = Date.now();
+      const intervalSeconds = (st && st.intervalSeconds) || 180;
+      let status = 'ok';
+      if (!active) status = 'detenido';
+      else if (!st || !st.lastAttemptAt) status = 'iniciando';
+      else if (st.nextTryAt == null && now - st.lastAttemptAt > (intervalSeconds + 240) * 1000) status = 'colgado';
+      else if (st.consecutiveFailures > 0) status = /cloudflare|challenge/i.test(st.lastError || '') ? 'cloudflare' : 'degradado';
+      else if (st.lastSuccessAt && now - st.lastSuccessAt > (intervalSeconds * 2 + 300) * 1000) status = 'degradado';
+      const labels = { ok: 'OK', cloudflare: 'Cloudflare', degradado: 'Degradado', colgado: 'Colgado', detenido: 'Detenido', iniciando: 'Iniciando' };
+      const rawHistory = ((st && st.history) || []).slice(-30);
+      const maxDuration = Math.max(...rawHistory.map(h => h.durationMs || 0), 1);
+      const history = rawHistory.map(h => Object.assign({}, h, {
+        heightPct: Math.max(6, Math.min(100, Math.round(((h.durationMs || 0) / maxDuration) * 100))),
+        durationText: fmtDuration(h.durationMs),
+        memoryText: fmtBytes(h.memoryBytes)
+      }));
+      const day = (st && st.history) || [];
+      const dayOk = day.filter(h => h.ok).length;
+      const dayFail = day.length - dayOk;
+      const dayAvg = day.length ? Math.round(day.reduce((a, h) => a + (h.durationMs || 0), 0) / day.length) : null;
+      const dayMaxMem = day.length ? Math.max(...day.map(h => h.memoryBytes || 0)) : null;
+      const lastSuccessAt = (st && st.lastSuccessAt) || (stats && stats.updatedAt) || null;
+      const lastError = (st && st.lastError) || (stats && stats.error) || null;
+      return send(res, 200, {
+        status,
+        statusLabel: labels[status] || status,
+        active,
+        lastSuccessAt,
+        lastSuccessAgo: agoText(lastSuccessAt),
+        lastAttemptAt: (st && st.lastAttemptAt) || null,
+        lastAttemptAgo: agoText(st && st.lastAttemptAt),
+        nextTryAt: (st && st.nextTryAt) || null,
+        nextTryIn: inText(st && st.nextTryAt),
+        lastDurationMs: (st && st.lastDurationMs) || null,
+        lastDurationText: fmtDuration(st && st.lastDurationMs),
+        lastGameCount: (st && st.lastGameCount) || ((stats && stats.games) ? stats.games.length : null),
+        consecutiveFailures: (st && st.consecutiveFailures) || 0,
+        lastError,
+        lastErrorAgo: agoText(st && st.lastErrorAt),
+        backoffSeconds: (st && st.backoffSeconds) || 0,
+        intervalSeconds,
+        startedAt: (st && st.startedAt) || null,
+        uptimeText: (st && st.startedAt) ? fmtSpan(now - st.startedAt) : '—',
+        memoryBytes: (st && st.memoryBytes) || null,
+        memoryText: fmtBytes(st && st.memoryBytes),
+        memoryPeakText: fmtBytes(st && st.memoryPeakBytes),
+        cpuPercent: (st && st.lastCpuPercent) || null,
+        cpuPercentText: fmtPct(st && st.lastCpuPercent),
+        ioReadBytes: (st && st.lastIoReadBytes) || null,
+        ioReadText: fmtBytes(st && st.lastIoReadBytes),
+        ioWriteBytes: (st && st.lastIoWriteBytes) || null,
+        ioWriteText: fmtBytes(st && st.lastIoWriteBytes),
+        pids: (st && st.pids) || null,
+        oomKills: (st && st.oomKills) || 0,
+        throttled: (st && st.cpuNrThrottled) || 0,
+        history,
+        last24h: {
+          cycles: day.length,
+          ok: dayOk,
+          fail: dayFail,
+          successRateText: day.length ? ((dayOk / day.length) * 100).toFixed(1) + '%' : '—',
+          avgDurationText: fmtDuration(dayAvg),
+          maxMemoryText: fmtBytes(dayMaxMem)
+        }
       });
     }
     if (url === '/api/stats/refresh' && req.method === 'POST') {
