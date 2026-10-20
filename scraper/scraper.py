@@ -11,6 +11,8 @@ FLAG = os.path.join(BASE, 'config', 'stats.refresh')
 PROFILE = os.path.join(BASE, 'config', 'chrome-profile')
 URL = 'https://wiimmfi.de/stat?m=c'
 MAX_CYCLES = 30
+MAX_FAILS = 3
+MAX_BACKOFF = 900
 
 CONSOLAS = {
     'NDS-34x16.png': ['DS'],
@@ -67,12 +69,28 @@ def parse(html):
     games.sort(key=lambda g: (-g['online'], g['name']))
     return games
 
+class CycleError(Exception):
+    pass
+
 def write_stats(games, error=None):
-    json.dump({
-        'updatedAt': int(time.time() * 1000),
-        'error': error,
-        'games': games,
-    }, open(STATS, 'w'))
+    with open(STATS, 'w') as fh:
+        json.dump({
+            'updatedAt': int(time.time() * 1000),
+            'error': error,
+            'games': games,
+        }, fh)
+
+def write_error(error):
+    # Un bloqueo temporal no debe borrar el último listado bueno: se conserva
+    # updatedAt/games y solo se marca el error para que la UI lo muestre.
+    try:
+        with open(STATS) as fh:
+            prev = json.load(fh)
+    except Exception:
+        prev = {'updatedAt': None, 'games': []}
+    prev['error'] = error
+    with open(STATS, 'w') as fh:
+        json.dump(prev, fh)
 
 def is_blocked(html):
     low = (html or '').lower()
@@ -97,15 +115,26 @@ async def scrape_once(browser):
     try:
         tab = await asyncio.wait_for(browser.get(URL), timeout=60)
     except (asyncio.TimeoutError, TimeoutError):
-        log('timeout abriendo la página')
-        return
-    ok = await wait_challenge(tab)
-    html = await tab.get_content()
-    blocked = is_blocked(html)
-    games = [] if blocked else parse(html)
-    err = 'cloudflare' if blocked else None
-    write_stats(games, error=err)
-    log('%d juegos%s' % (len(games), (' (%s)' % err) if err else ''))
+        raise CycleError('timeout abriendo la página')
+    try:
+        ok = await asyncio.wait_for(wait_challenge(tab), timeout=100)
+    except (asyncio.TimeoutError, TimeoutError):
+        raise CycleError('timeout esperando Cloudflare')
+    if not ok:
+        raise CycleError('cloudflare (challenge no resuelto)')
+    try:
+        html = await asyncio.wait_for(tab.get_content(), timeout=30)
+    except (asyncio.TimeoutError, TimeoutError):
+        raise CycleError('timeout leyendo el HTML')
+    if not html:
+        raise CycleError('HTML vacío')
+    if is_blocked(html):
+        raise CycleError('cloudflare')
+    games = parse(html)
+    if not games:
+        raise CycleError('HTML sin juegos')
+    write_stats(games)
+    log('%d juegos' % len(games))
 
 def proc_state(pid):
     # Devuelve el estado del proceso, o None si ya no existe. El campo comm
@@ -182,7 +211,15 @@ def stop_browser(browser):
 async def main():
     os.makedirs(PROFILE, exist_ok=True)
     next_try = 0
+    fallos = 0
     while True:
+        # Si el próximo intento está lejos (backoff), no arrancamos Chrome
+        # para no retener 1,2 GB de RAM mientras esperamos.
+        if not os.path.isfile(FLAG):
+            restante = next_try - time.time()
+            if restante > 60:
+                await asyncio.sleep(min(restante - 60, 15))
+                continue
         browser = None
         # El contador vive con el navegador: si se declara fuera del bucle no
         # vuelve a bajar de MAX_CYCLES y cada ciclo acaba reconstruyendo Chrome.
@@ -196,25 +233,36 @@ async def main():
                     await asyncio.sleep(5)
                     continue
                 if manual:
-                    os.remove(FLAG)
+                    try:
+                        os.remove(FLAG)
+                    except OSError:
+                        pass
                     log('refresco manual solicitado')
-                err = False
                 try:
-                    await scrape_once(browser)
-                    next_try = now + load_interval()
+                    await asyncio.wait_for(scrape_once(browser), timeout=180)
+                    fallos = 0
                     ciclos += 1
+                    next_try = time.time() + load_interval()
                 except Exception as e:
-                    log('error de ciclo: %s' % e)
-                    err = True
-                    next_try = now + 5
-                # Vida útil acotada: ante error o cada MAX_CYCLES éxitos se
-                # reconstruye el navegador para no acumular memoria.
-                if err or ciclos >= MAX_CYCLES:
-                    motivo = 'error' if err else 'mantenimiento preventivo'
+                    fallos += 1
+                    motivo = str(e) or e.__class__.__name__
+                    if isinstance(e, (asyncio.TimeoutError, TimeoutError)):
+                        motivo = 'timeout del ciclo (180s)'
+                    espera = min(load_interval() * (2 ** min(fallos - 1, 4)), MAX_BACKOFF)
+                    next_try = time.time() + espera
+                    write_error(motivo)
+                    log('fallo %d: %s (reintento en %d min)' % (fallos, motivo, max(1, espera // 60)))
+                # Un fallo aislado no justifica reiniciar Chrome; a los 3
+                # consecutivos sí, para descartar una pestaña/instancia rota.
+                if fallos >= MAX_FAILS or ciclos >= MAX_CYCLES:
+                    motivo = 'fallos consecutivos' if fallos >= MAX_FAILS else 'mantenimiento preventivo'
                     log('reconstruyendo navegador (%s)…' % motivo)
                     break
         except Exception as e:
+            fallos += 1
             log('navegador: %s' % e)
+            espera = min(load_interval() * (2 ** min(fallos - 1, 4)), MAX_BACKOFF)
+            next_try = time.time() + espera
         finally:
             stop_browser(browser)
         espera = max(3, min(15, int(next_try - time.time())))

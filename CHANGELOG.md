@@ -4,6 +4,13 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/) y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
+## [Unreleased]
+
+### Fixed
+- **Thrashing de disco del scraper**: Chrome escribe su memoria compartida en `/tmp` (`--disable-dev-shm-usage`) y el cgroup la reclamaba contra `MemoryHigh=1200M`, generando lecturas masivas y disco al 99% durante horas. La unit ahora monta un tmpfs privado para `/tmp`, sube el límite de memoria a 2.5G y acota CPU (`CPUQuota=200%`), tareas y tiempo de vida (`RuntimeMaxSec=6h`).
+- **Bucles infinitos de Cloudflare**: los timeouts se trataban como ciclos exitosos, así que Chrome nunca se reconstruía. Ahora hay timeouts duros en navegación, challenge y lectura del HTML, backoff exponencial (3 a 15 min) y reconstrucción tras 3 fallos consecutivos.
+- **Listado preservado ante bloqueos**: un fallo de Cloudflare ya no borra los juegos; se conserva el último listado bueno y solo se marca el error.
+
 ## [0.2.4] - 2026-08-30
 
 Parche: la mitigación de 0.2.3 no llegaba a aplicarse y dejaba procesos huérfanos.

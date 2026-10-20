@@ -6,13 +6,23 @@ After=network.target
 Type=simple
 WorkingDirectory=/opt/ds-wifi/scraper
 Environment=HOME=/root
+# Chrome usa /tmp para la memoria compartida (--disable-dev-shm-usage).
+# Un tmpfs privado evita que el reclaim de la cgroup lo mande a disco.
+TemporaryFileSystem=/tmp:size=2G,mode=1777
+ExecStartPre=/bin/sh -c 'mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix'
 ExecStart=/usr/bin/xvfb-run -a -s "-screen 0 1280x800x24" /opt/ds-wifi/scraper/venv/bin/python /opt/ds-wifi/scraper/scraper.py
 Restart=always
 RestartSec=30
-# Cinturón de seguridad: si el proceso se desborda, systemd lo reinicia
-# en vez de quedarse sin RAM en el host.
-MemoryHigh=1200M
-MemoryMax=1500M
+# Cinturón de seguridad: el scraper no puede saturar el host ni quedar vivo
+# indefinidamente. Si se desborda, systemd lo reinicia (Restart=always).
+MemoryHigh=2000M
+MemoryMax=2500M
+# Sin swap: si se desborda, que systemd lo reinicie en vez de llenar el swap.
+MemorySwapMax=0
+CPUQuota=200%
+TasksMax=256
+RuntimeMaxSec=6h
+IOAccounting=yes
 KillMode=mixed
 TimeoutStopSec=20
 FinalKillSignal=SIGKILL

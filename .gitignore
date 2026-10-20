@@ -4,6 +4,8 @@ config/ap.json
 # generados en runtime
 config/generated/
 config/leases
+config/chrome-profile/
+config/stats.refresh
 
 # logs
 logs/
