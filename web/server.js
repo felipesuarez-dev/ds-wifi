@@ -11,6 +11,7 @@ const CFG_PATH = path.join(BASE, 'config', 'ap.json');
 const GEN_DIR = path.join(BASE, 'config', 'generated');
 const PUBLIC_DIR = path.join(BASE, 'web', 'public');
 const STATS_PATH = path.join(BASE, 'config', 'stats.json');
+const DAILY_PATH = path.join(BASE, 'config', 'daily-activity.json');
 const LASTSEEN_PATH = path.join(BASE, 'config', 'lastseen.json');
 
 const DEFAULTS = {
@@ -134,6 +135,20 @@ function readStatsFile() {
   try { return JSON.parse(fs.readFileSync(STATS_PATH, 'utf8')); } catch (e) { return null; }
 }
 
+function todayChile() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date());
+}
+
+function readDailyActivity() {
+  try {
+    const d = JSON.parse(fs.readFileSync(DAILY_PATH, 'utf8'));
+    if (d.date !== todayChile()) return { date: todayChile(), games: {} };
+    return d;
+  } catch (e) {
+    return { date: todayChile(), games: {} };
+  }
+}
+
 // ---- lastSeen (última conexión por dispositivo) ----
 let lastSeenMap = {};
 try { lastSeenMap = JSON.parse(fs.readFileSync(LASTSEEN_PATH, 'utf8')); } catch (e) {}
@@ -250,17 +265,20 @@ const server = http.createServer(async (req, res) => {
     }
     if (url === '/api/games') {
       const raw = readStatsFile();
+      const daily = readDailyActivity();
+      const dailyGames = daily.games || {};
       const q = decodeURIComponent((req.url.split('?')[1] || '').replace(/q=/, '')).toLowerCase();
       let games = (raw && raw.games) || [];
       if (q) games = games.filter(g => g.name.toLowerCase().includes(q));
+      games = games.map(g => {
+        const d = dailyGames[g.id] || {};
+        return Object.assign({}, g, {
+          todayMax: d.maxOnline || 0,
+          todayActive: (d.maxOnline || 0) > 0,
+          todayLastActiveAt: d.lastActiveAt || null
+        });
+      });
       return send(res, 200, { updatedAt: (raw && raw.updatedAt) || null, games: games.slice(0, 150) });
-    }
-    if (url === '/api/games') {
-      const raw = readStatsFile();
-      const q = (req.url.split('?')[1] || '').replace(/q=/, '').toLowerCase();
-      let games = (raw && raw.games) || [];
-      if (q) games = games.filter(g => g.name.toLowerCase().includes(q));
-      return send(res, 200, { updatedAt: (raw && raw.updatedAt) || null, games: games.slice(0, 100) });
     }
     if (url === '/api/toggle' && req.method === 'POST') {
       const body = await readBody(req);

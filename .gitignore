@@ -6,6 +6,7 @@ config/generated/
 config/leases
 config/chrome-profile/
 config/stats.refresh
+config/daily-activity.json*
 
 # logs
 logs/

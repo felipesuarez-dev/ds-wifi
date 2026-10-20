@@ -2,14 +2,18 @@
 # ds-wifi scraper: listado dinámico de juegos de Wiimmfi (nodriver + Chrome real).
 # Escribe config/stats.json y atiende refrescos manuales vía config/stats.refresh.
 import re, json, time, asyncio, os, signal
+from datetime import datetime
+from zoneinfo import ZoneInfo
 import nodriver as uc
 
 BASE = '/opt/ds-wifi'
 CFG = os.path.join(BASE, 'config', 'ap.json')
 STATS = os.path.join(BASE, 'config', 'stats.json')
+DAILY = os.path.join(BASE, 'config', 'daily-activity.json')
 FLAG = os.path.join(BASE, 'config', 'stats.refresh')
 PROFILE = os.path.join(BASE, 'config', 'chrome-profile')
 URL = 'https://wiimmfi.de/stat?m=c'
+TZ = ZoneInfo('America/Santiago')
 MAX_CYCLES = 30
 MAX_FAILS = 3
 MAX_BACKOFF = 900
@@ -92,6 +96,44 @@ def write_error(error):
     with open(STATS, 'w') as fh:
         json.dump(prev, fh)
 
+def today_key():
+    return datetime.now(TZ).date().isoformat()
+
+def load_daily():
+    try:
+        with open(DAILY) as fh:
+            data = json.load(fh)
+    except Exception:
+        data = {}
+    if data.get('date') != today_key() or not isinstance(data.get('games'), dict):
+        return {'date': today_key(), 'games': {}}
+    return data
+
+def write_daily(games):
+    # Pico de jugadores online del día (hora Chile) para el selector.
+    # Un fallo de escritura no debe tumbar el ciclo de scraping.
+    try:
+        data = load_daily()
+        now = int(time.time() * 1000)
+        for g in games:
+            online = g.get('online')
+            if not isinstance(online, int) or online <= 0:
+                continue
+            prev = data['games'].get(g['id']) or {}
+            data['games'][g['id']] = {
+                'name': g.get('name', ''),
+                'maxOnline': max(prev.get('maxOnline', 0), online),
+                'lastOnline': online,
+                'lastActiveAt': now,
+            }
+        data['updatedAt'] = now
+        tmp = DAILY + '.tmp'
+        with open(tmp, 'w') as fh:
+            json.dump(data, fh)
+        os.replace(tmp, DAILY)
+    except Exception as e:
+        log('no se pudo escribir actividad diaria: %s' % e)
+
 def is_blocked(html):
     low = (html or '').lower()
     return len(low) < 5000 or 'just a moment' in low or 'challenge-platform' in low
@@ -108,6 +150,28 @@ async def wait_challenge(tab, max_s=90):
         await asyncio.sleep(5)
     return False
 
+async def wait_table(tab, max_s=30):
+    # La tabla se renderiza por partes: esperar a que el número de filas se
+    # estabilice evita guardar listados parciales (por ejemplo 325 de 677).
+    last = -1
+    stable = 0
+    start = time.time()
+    while time.time() - start < max_s:
+        try:
+            n = int(await tab.evaluate("document.querySelectorAll('tr.tr0, tr.tr1').length"))
+            has_total = bool(await tab.evaluate("document.body.innerText.includes('Total:')"))
+        except Exception:
+            n, has_total = -1, False
+        if n == last and n > 0 and has_total:
+            stable += 1
+            if stable >= 3:
+                return n
+        else:
+            stable = 0
+            last = n
+        await asyncio.sleep(1)
+    return last
+
 async def scrape_once(browser):
     # Sin try/finally con tab.close(): cerrar la última pestaña apaga Chrome
     # entero. browser.get() reutiliza la primera pestaña, así el navegador
@@ -123,6 +187,12 @@ async def scrape_once(browser):
     if not ok:
         raise CycleError('cloudflare (challenge no resuelto)')
     try:
+        filas = await asyncio.wait_for(wait_table(tab), timeout=35)
+    except (asyncio.TimeoutError, TimeoutError):
+        raise CycleError('timeout esperando la tabla')
+    if filas < 1:
+        raise CycleError('tabla vacía')
+    try:
         html = await asyncio.wait_for(tab.get_content(), timeout=30)
     except (asyncio.TimeoutError, TimeoutError):
         raise CycleError('timeout leyendo el HTML')
@@ -133,6 +203,9 @@ async def scrape_once(browser):
     games = parse(html)
     if not games:
         raise CycleError('HTML sin juegos')
+    # Primero la actividad diaria: cuando la UI vea stats.json actualizado,
+    # el archivo diario ya tiene el pico de este ciclo.
+    write_daily(games)
     write_stats(games)
     log('%d juegos' % len(games))
 
@@ -239,7 +312,7 @@ async def main():
                         pass
                     log('refresco manual solicitado')
                 try:
-                    await asyncio.wait_for(scrape_once(browser), timeout=180)
+                    await asyncio.wait_for(scrape_once(browser), timeout=240)
                     fallos = 0
                     ciclos += 1
                     next_try = time.time() + load_interval()
@@ -247,7 +320,7 @@ async def main():
                     fallos += 1
                     motivo = str(e) or e.__class__.__name__
                     if isinstance(e, (asyncio.TimeoutError, TimeoutError)):
-                        motivo = 'timeout del ciclo (180s)'
+                        motivo = 'timeout del ciclo (240s)'
                     espera = min(load_interval() * (2 ** min(fallos - 1, 4)), MAX_BACKOFF)
                     next_try = time.time() + espera
                     write_error(motivo)
