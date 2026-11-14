@@ -2,17 +2,24 @@
 # ds-wifi scraper: listado dinámico de juegos de Wiimmfi (nodriver + Chrome real).
 # Escribe config/stats.json y atiende refrescos manuales vía config/stats.refresh.
 import re, json, time, asyncio, os, signal
+from datetime import datetime
+from zoneinfo import ZoneInfo
 import nodriver as uc
 
 BASE = '/opt/ds-wifi'
 CFG = os.path.join(BASE, 'config', 'ap.json')
 STATS = os.path.join(BASE, 'config', 'stats.json')
+DAILY = os.path.join(BASE, 'config', 'daily-activity.json')
+STATUS = os.path.join(BASE, 'config', 'scraper-status.json')
 FLAG = os.path.join(BASE, 'config', 'stats.refresh')
 PROFILE = os.path.join(BASE, 'config', 'chrome-profile')
 URL = 'https://wiimmfi.de/stat?m=c'
+TZ = ZoneInfo('America/Santiago')
 MAX_CYCLES = 30
 MAX_FAILS = 3
 MAX_BACKOFF = 900
+STATUS_HISTORY_MAX = 480
+STATUS_STATE = {}
 
 CONSOLAS = {
     'NDS-34x16.png': ['DS'],
@@ -92,6 +99,199 @@ def write_error(error):
     with open(STATS, 'w') as fh:
         json.dump(prev, fh)
 
+def today_key():
+    return datetime.now(TZ).date().isoformat()
+
+def load_daily():
+    try:
+        with open(DAILY) as fh:
+            data = json.load(fh)
+    except Exception:
+        data = {}
+    if data.get('date') != today_key() or not isinstance(data.get('games'), dict):
+        return {'date': today_key(), 'games': {}}
+    return data
+
+def write_daily(games):
+    # Pico de jugadores online del día (hora Chile) para el selector.
+    # Un fallo de escritura no debe tumbar el ciclo de scraping.
+    try:
+        data = load_daily()
+        now = int(time.time() * 1000)
+        for g in games:
+            online = g.get('online')
+            if not isinstance(online, int) or online <= 0:
+                continue
+            prev = data['games'].get(g['id']) or {}
+            data['games'][g['id']] = {
+                'name': g.get('name', ''),
+                'maxOnline': max(prev.get('maxOnline', 0), online),
+                'lastOnline': online,
+                'lastActiveAt': now,
+            }
+        data['updatedAt'] = now
+        tmp = DAILY + '.tmp'
+        with open(tmp, 'w') as fh:
+            json.dump(data, fh)
+        os.replace(tmp, DAILY)
+    except Exception as e:
+        log('no se pudo escribir actividad diaria: %s' % e)
+
+def load_status():
+    try:
+        with open(STATUS) as fh:
+            data = json.load(fh)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+def cgroup_metrics():
+    # Métricas del servicio completo (Python + Xvfb + Chrome), no solo del
+    # proceso Python: el cgroup es la fuente real de CPU/RAM/IO.
+    out = {}
+    try:
+        cg = None
+        with open('/proc/self/cgroup') as fh:
+            for line in fh:
+                if line.startswith('0::'):
+                    cg = '/sys/fs/cgroup' + line.strip().split('::', 1)[1]
+                    break
+        if not cg:
+            return out
+
+        def read(name):
+            try:
+                with open(os.path.join(cg, name)) as fh:
+                    return fh.read()
+            except OSError:
+                return ''
+
+        mem = read('memory.current').strip()
+        if mem.isdigit():
+            out['memoryBytes'] = int(mem)
+        peak = read('memory.peak').strip()
+        if peak.isdigit():
+            out['memoryPeakBytes'] = int(peak)
+        pids = read('pids.current').strip()
+        if pids.isdigit():
+            out['pids'] = int(pids)
+
+        for line in read('cpu.stat').splitlines():
+            key, _, val = line.partition(' ')
+            if not val.isdigit():
+                continue
+            if key == 'usage_usec':
+                out['cpuUsageUsec'] = int(val)
+            elif key == 'nr_throttled':
+                out['cpuNrThrottled'] = int(val)
+            elif key == 'throttled_usec':
+                out['cpuThrottledUsec'] = int(val)
+
+        rbytes = wbytes = 0
+        for line in read('io.stat').splitlines():
+            for pair in line.split()[1:]:
+                key, _, val = pair.partition('=')
+                if not val.isdigit():
+                    continue
+                if key == 'rbytes':
+                    rbytes = max(rbytes, int(val))
+                elif key == 'wbytes':
+                    wbytes = max(wbytes, int(val))
+        out['ioReadBytes'] = rbytes
+        out['ioWriteBytes'] = wbytes
+
+        for line in read('memory.events').splitlines():
+            key, _, val = line.partition(' ')
+            if key == 'oom_kill' and val.isdigit():
+                out['oomKills'] = int(val)
+    except Exception:
+        pass
+    return out
+
+def write_status():
+    try:
+        tmp = STATUS + '.tmp'
+        with open(tmp, 'w') as fh:
+            json.dump(STATUS_STATE, fh)
+        os.replace(tmp, STATUS)
+    except Exception as e:
+        log('no se pudo escribir status: %s' % e)
+
+def init_status():
+    global STATUS_STATE
+    prev = load_status()
+    now = int(time.time() * 1000)
+    STATUS_STATE = {
+        'startedAt': now,
+        'heartbeatAt': now,
+        'lastAttemptAt': None,
+        'lastSuccessAt': prev.get('lastSuccessAt'),
+        'lastError': prev.get('lastError'),
+        'lastErrorAt': prev.get('lastErrorAt'),
+        'consecutiveFailures': 0,
+        'attempts': int(prev.get('attempts', 0) or 0),
+        'successCycles': int(prev.get('successCycles', 0) or 0),
+        'lastDurationMs': prev.get('lastDurationMs'),
+        'lastGameCount': prev.get('lastGameCount'),
+        'lastCpuPercent': prev.get('lastCpuPercent'),
+        'lastMemoryBytes': prev.get('lastMemoryBytes'),
+        'lastIoReadBytes': prev.get('lastIoReadBytes'),
+        'lastIoWriteBytes': prev.get('lastIoWriteBytes'),
+        'nextTryAt': None,
+        'intervalSeconds': load_interval(),
+        'backoffSeconds': 0,
+        'lastBackoffSeconds': 0,
+        'history': (prev.get('history') or [])[-STATUS_HISTORY_MAX:],
+    }
+    STATUS_STATE.update(cgroup_metrics())
+    write_status()
+
+def record_cycle(ok, game_count, error, start_ts, start_metrics, backoff_s, next_try_ms):
+    global STATUS_STATE
+    now = int(time.time() * 1000)
+    duration_ms = max(0, int((time.time() - start_ts) * 1000))
+    end = cgroup_metrics()
+    if end:
+        STATUS_STATE.update(end)
+        if duration_ms > 0 and 'cpuUsageUsec' in start_metrics and 'cpuUsageUsec' in end:
+            cpu_usec = max(0, end['cpuUsageUsec'] - start_metrics['cpuUsageUsec'])
+            STATUS_STATE['lastCpuPercent'] = round(cpu_usec / (duration_ms * 1000) * 100, 1)
+        if 'ioReadBytes' in start_metrics and 'ioReadBytes' in end:
+            STATUS_STATE['lastIoReadBytes'] = max(0, end['ioReadBytes'] - start_metrics['ioReadBytes'])
+        if 'ioWriteBytes' in start_metrics and 'ioWriteBytes' in end:
+            STATUS_STATE['lastIoWriteBytes'] = max(0, end['ioWriteBytes'] - start_metrics['ioWriteBytes'])
+    STATUS_STATE['attempts'] = int(STATUS_STATE.get('attempts', 0)) + 1
+    STATUS_STATE['lastDurationMs'] = duration_ms
+    STATUS_STATE['intervalSeconds'] = load_interval()
+    STATUS_STATE['backoffSeconds'] = backoff_s
+    STATUS_STATE['lastBackoffSeconds'] = backoff_s
+    STATUS_STATE['nextTryAt'] = next_try_ms
+    STATUS_STATE['heartbeatAt'] = now
+    if ok:
+        STATUS_STATE['lastSuccessAt'] = now
+        STATUS_STATE['lastError'] = None
+        STATUS_STATE['lastErrorAt'] = None
+        STATUS_STATE['consecutiveFailures'] = 0
+        STATUS_STATE['lastGameCount'] = game_count
+        STATUS_STATE['successCycles'] = int(STATUS_STATE.get('successCycles', 0)) + 1
+    else:
+        STATUS_STATE['lastError'] = error
+        STATUS_STATE['lastErrorAt'] = now
+        STATUS_STATE['consecutiveFailures'] = int(STATUS_STATE.get('consecutiveFailures', 0)) + 1
+    entry = {
+        'at': now,
+        'ok': bool(ok),
+        'games': game_count if ok else None,
+        'durationMs': duration_ms,
+        'cpuPercent': STATUS_STATE.get('lastCpuPercent'),
+        'memoryBytes': STATUS_STATE.get('memoryBytes'),
+        'error': None if ok else error,
+    }
+    hist = STATUS_STATE.get('history') or []
+    hist.append(entry)
+    STATUS_STATE['history'] = hist[-STATUS_HISTORY_MAX:]
+    write_status()
+
 def is_blocked(html):
     low = (html or '').lower()
     return len(low) < 5000 or 'just a moment' in low or 'challenge-platform' in low
@@ -108,6 +308,28 @@ async def wait_challenge(tab, max_s=90):
         await asyncio.sleep(5)
     return False
 
+async def wait_table(tab, max_s=30):
+    # La tabla se renderiza por partes: esperar a que el número de filas se
+    # estabilice evita guardar listados parciales (por ejemplo 325 de 677).
+    last = -1
+    stable = 0
+    start = time.time()
+    while time.time() - start < max_s:
+        try:
+            n = int(await tab.evaluate("document.querySelectorAll('tr.tr0, tr.tr1').length"))
+            has_total = bool(await tab.evaluate("document.body.innerText.includes('Total:')"))
+        except Exception:
+            n, has_total = -1, False
+        if n == last and n > 0 and has_total:
+            stable += 1
+            if stable >= 3:
+                return n
+        else:
+            stable = 0
+            last = n
+        await asyncio.sleep(1)
+    return last
+
 async def scrape_once(browser):
     # Sin try/finally con tab.close(): cerrar la última pestaña apaga Chrome
     # entero. browser.get() reutiliza la primera pestaña, así el navegador
@@ -123,6 +345,12 @@ async def scrape_once(browser):
     if not ok:
         raise CycleError('cloudflare (challenge no resuelto)')
     try:
+        filas = await asyncio.wait_for(wait_table(tab), timeout=35)
+    except (asyncio.TimeoutError, TimeoutError):
+        raise CycleError('timeout esperando la tabla')
+    if filas < 1:
+        raise CycleError('tabla vacía')
+    try:
         html = await asyncio.wait_for(tab.get_content(), timeout=30)
     except (asyncio.TimeoutError, TimeoutError):
         raise CycleError('timeout leyendo el HTML')
@@ -133,8 +361,12 @@ async def scrape_once(browser):
     games = parse(html)
     if not games:
         raise CycleError('HTML sin juegos')
+    # Primero la actividad diaria: cuando la UI vea stats.json actualizado,
+    # el archivo diario ya tiene el pico de este ciclo.
+    write_daily(games)
     write_stats(games)
     log('%d juegos' % len(games))
+    return len(games)
 
 def proc_state(pid):
     # Devuelve el estado del proceso, o None si ya no existe. El campo comm
@@ -210,6 +442,7 @@ def stop_browser(browser):
 
 async def main():
     os.makedirs(PROFILE, exist_ok=True)
+    init_status()
     next_try = 0
     fallos = 0
     while True:
@@ -238,20 +471,28 @@ async def main():
                     except OSError:
                         pass
                     log('refresco manual solicitado')
+                start_ts = time.time()
+                start_metrics = cgroup_metrics()
+                STATUS_STATE['lastAttemptAt'] = int(start_ts * 1000)
+                STATUS_STATE['nextTryAt'] = None
+                STATUS_STATE['heartbeatAt'] = int(start_ts * 1000)
+                write_status()
                 try:
-                    await asyncio.wait_for(scrape_once(browser), timeout=180)
+                    count = await asyncio.wait_for(scrape_once(browser), timeout=240)
                     fallos = 0
                     ciclos += 1
                     next_try = time.time() + load_interval()
+                    record_cycle(True, count, None, start_ts, start_metrics, 0, int(next_try * 1000))
                 except Exception as e:
                     fallos += 1
                     motivo = str(e) or e.__class__.__name__
                     if isinstance(e, (asyncio.TimeoutError, TimeoutError)):
-                        motivo = 'timeout del ciclo (180s)'
+                        motivo = 'timeout del ciclo (240s)'
                     espera = min(load_interval() * (2 ** min(fallos - 1, 4)), MAX_BACKOFF)
                     next_try = time.time() + espera
                     write_error(motivo)
                     log('fallo %d: %s (reintento en %d min)' % (fallos, motivo, max(1, espera // 60)))
+                    record_cycle(False, None, motivo, start_ts, start_metrics, espera, int(next_try * 1000))
                 # Un fallo aislado no justifica reiniciar Chrome; a los 3
                 # consecutivos sí, para descartar una pestaña/instancia rota.
                 if fallos >= MAX_FAILS or ciclos >= MAX_CYCLES:
@@ -263,6 +504,7 @@ async def main():
             log('navegador: %s' % e)
             espera = min(load_interval() * (2 ** min(fallos - 1, 4)), MAX_BACKOFF)
             next_try = time.time() + espera
+            record_cycle(False, None, 'navegador: %s' % e, time.time(), {}, espera, int(next_try * 1000))
         finally:
             stop_browser(browser)
         espera = max(3, min(15, int(next_try - time.time())))

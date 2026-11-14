@@ -69,7 +69,7 @@ sudo ./scraper/install.sh
 
 El worker usa **nodriver + Google Chrome real** (headful bajo Xvfb), que es lo que pasa el reto de Cloudflare de `wiimmfi.de`. Cada pocos minutos descarga **el listado completo de juegos** (ID, nombre, estado y jugadores online) de una sola URL (`/stat?m=c`) y lo expone en la interfaz.
 
-**No hay que pegar URLs ni cookies**: en "Wiimmfi · Mis juegos" buscas el juego que te interesa, lo agregas a tus favoritos y eliges el umbral de alerta. Todo dinámico.
+**No hay que pegar URLs ni cookies**: en "Wiimmfi · Mis juegos" buscas el juego que te interesa, lo agregas a tus favoritos y eliges el umbral de alerta. Todo dinámico. El selector muestra además el **pico de jugadores online del día** (hora Chile) por juego, calculado con las muestras del scraper.
 
 > Requiere Google Chrome instalado (el instalador lo baja automáticamente) y usa ~1.2 GB de RAM por el navegador.
 
