@@ -40,7 +40,7 @@ La Nintendo DS / DS Lite solo soporta WiFi **802.11b** con seguridad **abierta o
 Requisitos: Ubuntu 24.04 (o derivado con `systemd` e `iptables`), una tarjeta WiFi que soporte modo AP en 2.4 GHz (`iw list` debe listar `AP`) y conexión a internet por cable.
 
 ```bash
-git clone https://github.com/felipesuarez-dev/ds-wifi.git
+git clone --branch master https://github.com/felipesuarez-dev/ds-wifi.git
 cd ds-wifi
 sudo ./install.sh
 ```
@@ -69,9 +69,9 @@ sudo ./scraper/install.sh
 
 El worker usa **nodriver + Google Chrome real** (headful bajo Xvfb), que es lo que pasa el reto de Cloudflare de `wiimmfi.de`. Cada pocos minutos descarga **el listado completo de juegos** (ID, nombre, estado y jugadores online) de una sola URL (`/stat?m=c`) y lo expone en la interfaz.
 
-**No hay que pegar URLs ni cookies**: en "Wiimmfi · Mis juegos" buscas el juego que te interesa, lo agregas a tus favoritos y eliges el umbral de alerta. Todo dinámico.
+**No hay que pegar URLs ni cookies**: en "Wiimmfi · Mis juegos" buscas el juego que te interesa, lo agregas a tus favoritos y eliges el umbral de alerta. Todo dinámico. El selector muestra además el **pico de jugadores online del día** (hora Chile) por juego, calculado con las muestras del scraper.
 
-> Requiere Google Chrome instalado (el instalador lo baja automáticamente) y usa ~300 MB de RAM por el navegador.
+> Requiere Google Chrome instalado (el instalador lo baja automáticamente) y usa ~1.2 GB de RAM por el navegador.
 
 ## Cómo funciona
 
@@ -184,7 +184,7 @@ sudoers/dswifi         # permisos acotados para el usuario dswifi
 
 MIT © 2026 — ver [LICENSE](LICENSE).
 
-[version-badge]: https://img.shields.io/badge/versi%C3%B3n-0.2.4-34d399?style=flat-square
+[version-badge]: https://img.shields.io/badge/versi%C3%B3n-0.3.0-34d399?style=flat-square
 [status-badge]: https://img.shields.io/badge/estado-Beta-fbbf24?style=flat-square
 [license-badge]: https://img.shields.io/badge/licencia-MIT-a8d8a8?style=flat-square
 [bash-badge]: https://img.shields.io/badge/bash-4EAA25?style=flat-square&logo=gnubash&logoColor=white
