@@ -40,7 +40,7 @@ La Nintendo DS / DS Lite solo soporta WiFi **802.11b** con seguridad **abierta o
 Requisitos: Ubuntu 24.04 (o derivado con `systemd` e `iptables`), una tarjeta WiFi que soporte modo AP en 2.4 GHz (`iw list` debe listar `AP`) y conexión a internet por cable.
 
 ```bash
-git clone https://github.com/felipesuarez-dev/ds-wifi.git
+git clone --branch master https://github.com/felipesuarez-dev/ds-wifi.git
 cd ds-wifi
 sudo ./install.sh
 ```
@@ -184,7 +184,7 @@ sudoers/dswifi         # permisos acotados para el usuario dswifi
 
 MIT © 2026 — ver [LICENSE](LICENSE).
 
-[version-badge]: https://img.shields.io/badge/versi%C3%B3n-0.2.4-34d399?style=flat-square
+[version-badge]: https://img.shields.io/badge/versi%C3%B3n-0.3.0-34d399?style=flat-square
 [status-badge]: https://img.shields.io/badge/estado-Beta-fbbf24?style=flat-square
 [license-badge]: https://img.shields.io/badge/licencia-MIT-a8d8a8?style=flat-square
 [bash-badge]: https://img.shields.io/badge/bash-4EAA25?style=flat-square&logo=gnubash&logoColor=white
